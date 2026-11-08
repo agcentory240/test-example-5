@@ -14,12 +14,12 @@ $appEnv = (string) (($_ENV['APP_ENV'] ?? getenv('APP_ENV')) ?: 'dev');
 $isDev = $appEnv !== 'prod';
 
 $corsAllowedOrigins = array_values(array_filter(array_map(
-    static fn (string $origin): string => trim($origin),
+    static fn(string $origin): string => trim($origin),
     explode(',', (string) (($_ENV['CORS_ALLOWED_ORIGINS'] ?? getenv('CORS_ALLOWED_ORIGINS'))
         ?: 'http://localhost:4200,http://localhost:5173')),
 )));
 
-$env = static fn (string $key, string $default = ''): string => (string) (($_ENV[$key] ?? getenv($key)) ?: $default);
+$env = static fn(string $key, string $default = ''): string => (string) (($_ENV[$key] ?? getenv($key)) ?: $default);
 
 // APP_DEBUG переопределяет поведение по умолчанию (dev => on, prod => off).
 $debug = filter_var($env('APP_DEBUG', $isDev ? '1' : '0'), FILTER_VALIDATE_BOOLEAN);

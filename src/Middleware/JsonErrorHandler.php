@@ -17,8 +17,7 @@ final class JsonErrorHandler
 {
     public function __construct(
         private readonly ResponseFactoryInterface $responseFactory,
-    ) {
-    }
+    ) {}
 
     public function __invoke(
         Request $request,

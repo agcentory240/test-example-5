@@ -24,8 +24,7 @@ final class CorsMiddleware implements MiddlewareInterface
     public function __construct(
         private readonly ResponseFactoryInterface $responseFactory,
         private readonly SettingsInterface $settings,
-    ) {
-    }
+    ) {}
 
     public function process(Request $request, RequestHandlerInterface $handler): Response
     {

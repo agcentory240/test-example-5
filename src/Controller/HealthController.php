@@ -17,8 +17,7 @@ final class HealthController
         private readonly SettingsInterface $settings,
         private readonly LoggerInterface $logger,
         private readonly Connection $connection,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request, Response $response): Response
     {
