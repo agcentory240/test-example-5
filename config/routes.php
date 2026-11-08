@@ -10,5 +10,6 @@ return static function (App $app): void {
     // ВАЖНО: колбэк группы не static — Slim биндит его к контейнеру.
     $app->group('/api', function (RouteCollectorProxy $group): void {
         $group->get('/health', [HealthController::class, 'index']);
+        $group->get('/health/db', [HealthController::class, 'db']);
     });
 };

@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Settings\Settings;
 use App\Settings\SettingsInterface;
 use DI\ContainerBuilder;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger;
@@ -26,6 +28,14 @@ $builder->addDefinitions([
 
     // Нужен middleware (CORS, JSON-ошибки) и AppFactory.
     ResponseFactoryInterface::class => new ResponseFactory(),
+
+    // Doctrine DBAL: только подключение, без ORM.
+    Connection::class => static function () use ($settings): Connection {
+        /** @var array<string, mixed> $db */
+        $db = $settings['db'];
+
+        return DriverManager::getConnection($db);
+    },
 
     LoggerInterface::class => static function () use ($settings): LoggerInterface {
         $logger = new Logger('app');

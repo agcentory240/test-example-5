@@ -5,6 +5,7 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.3",
+        "doctrine/dbal": "^4.2",
         "monolog/monolog": "^3.8",
         "php-di/php-di": "^7.0",
         "slim/psr7": "^1.7",

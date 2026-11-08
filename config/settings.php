@@ -19,6 +19,8 @@ $corsAllowedOrigins = array_values(array_filter(array_map(
         ?: 'http://localhost:4200,http://localhost:5173')),
 )));
 
+$env = static fn (string $key, string $default = ''): string => (string) (($_ENV[$key] ?? getenv($key)) ?: $default);
+
 return [
     'settings' => [
         'app_env' => $appEnv,
@@ -27,5 +29,15 @@ return [
         'log_errors' => true,
         'log_error_details' => $isDev,
         'cors_allowed_origins' => $corsAllowedOrigins,
+        // Параметры DBAL (Doctrine DBAL, без ORM).
+        'db' => [
+            'driver' => 'pdo_pgsql',
+            'host' => $env('DB_HOST', 'db'),
+            'port' => (int) $env('DB_PORT', '5432'),
+            'dbname' => $env('DB_NAME', 'app'),
+            'user' => $env('DB_USER', 'app'),
+            'password' => $env('DB_PASSWORD', 'secret'),
+            'charset' => 'utf8',
+        ],
     ],
 ];
