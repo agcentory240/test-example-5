@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+vendor
+node_modules
+client/node_modules
+client/dist
+var
+tests
+docker-compose.yml
+Makefile
+README.md
+DECISIONS.md
+TASK.md
+CHECKLIST.md
+AGENTS.md

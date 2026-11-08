@@ -1,3 +1,23 @@
 AGENTS.md
 TASK.md
 CHECKLIST.md
+
+# env
+.env
+.env.*
+!.env.example
+
+# backend
+vendor/
+var/
+*.log
+
+# frontend
+node_modules/
+dist/
+.angular/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
