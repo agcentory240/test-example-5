@@ -21,13 +21,16 @@ $corsAllowedOrigins = array_values(array_filter(array_map(
 
 $env = static fn (string $key, string $default = ''): string => (string) (($_ENV[$key] ?? getenv($key)) ?: $default);
 
+// APP_DEBUG переопределяет поведение по умолчанию (dev => on, prod => off).
+$debug = filter_var($env('APP_DEBUG', $isDev ? '1' : '0'), FILTER_VALIDATE_BOOLEAN);
+
 return [
     'settings' => [
         'app_env' => $appEnv,
-        'debug' => $isDev,
-        'display_error_details' => $isDev,
+        'debug' => $debug,
+        'display_error_details' => $debug,
         'log_errors' => true,
-        'log_error_details' => $isDev,
+        'log_error_details' => $debug,
         'cors_allowed_origins' => $corsAllowedOrigins,
         // Параметры DBAL (Doctrine DBAL, без ORM).
         'db' => [
