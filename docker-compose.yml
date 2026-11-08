@@ -23,8 +23,8 @@ services:
       - ./:/var/www/html
       - /var/www/html/vendor
       - /var/www/html/node_modules
-      # Общий volume для app и worker: загруженные файлы импорта должны быть видны консьюмеру.
-      - var_data:/var/www/html/var
+      # Общий каталог с хостом: загруженные файлы видны локально и доступны воркеру.
+      - ./var:/var/www/html/var
     depends_on:
       db:
         condition: service_healthy
@@ -58,7 +58,7 @@ services:
       - ./:/var/www/html
       - /var/www/html/vendor
       - /var/www/html/node_modules
-      - var_data:/var/www/html/var
+      - ./var:/var/www/html/var
     depends_on:
       db:
         condition: service_healthy
@@ -144,4 +144,3 @@ networks:
 volumes:
   postgres_data:
   pgadmin_data:
-  var_data:
