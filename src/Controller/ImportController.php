@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\DTO\ProductDTO;
 use App\Service\ImportFileStorage;
+use App\Service\XlsxParserService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\UploadedFileInterface;
@@ -13,6 +15,8 @@ use Psr\Log\LoggerInterface;
 final class ImportController
 {
     private const ALLOWED_EXTENSION = 'xlsx';
+
+    private const PARSE_PREVIEW_LIMIT = 3;
 
     /**
      * ВАЖНО: MIME проверяем по белому списку, но не требуем строго —
@@ -27,10 +31,90 @@ final class ImportController
 
     public function __construct(
         private readonly ImportFileStorage $storage,
+        private readonly XlsxParserService $parser,
         private readonly LoggerInterface $logger,
     ) {}
 
     public function upload(Request $request, Response $response): Response
+    {
+        $file = $this->extractFile($request, $response);
+
+        if ($file instanceof Response) {
+            return $file;
+        }
+
+        $originalName = (string) $file->getClientFilename();
+        $mimeType = strtolower((string) $file->getClientMediaType());
+        $jobId = $this->storage->generateJobId();
+
+        try {
+            $path = $this->storage->save($file, $jobId);
+        } catch (\Throwable $e) {
+            $this->logger->error('Cannot store import file', ['jobId' => $jobId, 'exception' => $e]);
+
+            return $this->json($response, ['error' => 'cannot store file'], 500);
+        }
+
+        $this->logger->info('Import file accepted', [
+            'jobId' => $jobId,
+            'path' => $path,
+            'size' => $file->getSize(),
+            'mime' => $mimeType,
+        ]);
+
+        // Заглушка: сообщение в очередь (Messenger) будет диспатчиться следующим шагом.
+        return $this->json($response, [
+            'status' => 'ok',
+            'jobId' => $jobId,
+            'filename' => $originalName,
+            'size' => $file->getSize(),
+        ], 202);
+    }
+
+    /**
+     * Временный эндпоинт: только парсинг XLSX в DTO, без записи в БД и очереди.
+     */
+    public function parseTest(Request $request, Response $response): Response
+    {
+        $file = $this->extractFile($request, $response);
+
+        if ($file instanceof Response) {
+            return $file;
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'import_parse');
+
+        if ($tmpPath === false) {
+            $this->logger->error('Cannot create temp file for parse test');
+
+            return $this->json($response, ['error' => 'cannot create temp file'], 500);
+        }
+
+        try {
+            $file->moveTo($tmpPath);
+            $products = $this->parser->parse($tmpPath);
+        } catch (\Throwable $e) {
+            $this->logger->error('XLSX parse test failed', ['exception' => $e]);
+
+            return $this->json($response, ['error' => 'cannot parse file'], 422);
+        } finally {
+            if (is_file($tmpPath)) {
+                unlink($tmpPath);
+            }
+        }
+
+        $preview = array_map(
+            static fn(ProductDTO $product): array => $product->toArray(),
+            array_slice($products, 0, self::PARSE_PREVIEW_LIMIT),
+        );
+
+        return $this->json($response, $preview, 200);
+    }
+
+    /**
+     * Валидация загруженного файла: наличие, ошибки загрузки, размер, расширение, MIME.
+     */
+    private function extractFile(Request $request, Response $response): UploadedFileInterface|Response
     {
         $files = $request->getUploadedFiles();
         $file = $files['file'] ?? null;
@@ -69,34 +153,11 @@ final class ImportController
             return $this->json($response, ['error' => 'invalid file type'], 400);
         }
 
-        $jobId = $this->storage->generateJobId();
-
-        try {
-            $path = $this->storage->save($file, $jobId);
-        } catch (\Throwable $e) {
-            $this->logger->error('Cannot store import file', ['jobId' => $jobId, 'exception' => $e]);
-
-            return $this->json($response, ['error' => 'cannot store file'], 500);
-        }
-
-        $this->logger->info('Import file accepted', [
-            'jobId' => $jobId,
-            'path' => $path,
-            'size' => $file->getSize(),
-            'mime' => $mimeType,
-        ]);
-
-        // Заглушка: сообщение в очередь (Messenger) будет диспатчиться следующим шагом.
-        return $this->json($response, [
-            'status' => 'ok',
-            'jobId' => $jobId,
-            'filename' => $originalName,
-            'size' => $file->getSize(),
-        ], 202);
+        return $file;
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param array<mixed> $payload
      */
     private function json(Response $response, array $payload, int $status): Response
     {

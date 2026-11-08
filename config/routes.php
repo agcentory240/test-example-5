@@ -15,5 +15,8 @@ return static function (App $app): void {
 
         // Загрузка XLSX-файла импорта (заглушка, без постановки в очередь).
         $group->post('/import', [ImportController::class, 'upload']);
+
+        // ВРЕМЕННЫЙ роут: только парсинг XLSX в DTO (без БД и очереди).
+        $group->post('/import/parse-test', [ImportController::class, 'parseTest']);
     });
 };
