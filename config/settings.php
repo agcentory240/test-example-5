@@ -32,6 +32,9 @@ return [
         'log_errors' => true,
         'log_error_details' => $debug,
         'cors_allowed_origins' => $corsAllowedOrigins,
+        // Импорт товаров: каталог для загруженных файлов и лимит размера (10 МБ).
+        'import_upload_dir' => $root . '/var/uploads/imports',
+        'import_max_file_size' => 10 * 1024 * 1024,
         // Параметры DBAL (Doctrine DBAL, без ORM).
         'db' => [
             'driver' => 'pdo_pgsql',

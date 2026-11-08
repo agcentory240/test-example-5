@@ -52,3 +52,13 @@
 21. **Namespace миграций — `Migrations`**, путь — `migrations/` (`config/migrations.php`). Классы миграций грузятся самим Doctrine Migrations (`require_once`), поэтому PSR-4-автозагрузка для них в `composer.json` не нужна.
 
 22. **`orm:validate-schema` показывает `[ERROR]` из-за служебной таблицы `doctrine_migration_versions`** — она есть в БД, но не описана в маппинге, поэтому SchemaTool хочет её удалить. Это ожидаемо: `doctrine/migrations` использует `tablesExist()` на том же соединении, и глобальный `schemaAssetsFilter` сломал бы миграции. Реальная проверка синхронизации — `php bin/doctrine migrations:diff` (должен возвращать `No changes detected`).
+
+## Загрузка файла импорта (блок 6.1)
+
+23. **`POST /api/import` отвечает `202 Accepted`** — импорт асинхронный. На этом шаге файл только валидируется и сохраняется в `var/uploads/imports/{jobId}.xlsx`; диспатч в Messenger и парсинг — следующие шаги.
+
+24. **UUID v4 генерируется вручную** (`random_bytes()` → `ImportFileStorage::generateJobId()`): `ramsey/uuid` в `composer.json` нет, а добавлять зависимости без согласования нельзя.
+
+25. **Валидация файла:** расширение строго `.xlsx`; MIME — по белому списку (`...spreadsheetml.sheet`, `application/vnd.ms-excel`, `application/zip`, `application/octet-stream`), т.к. curl/браузер может отдать `octet-stream`. Лимит 10 МБ (`import_max_file_size` в `config/settings.php`), `php.ini` поднимает `upload_max_filesize` до 64 МБ.
+
+26. **Если превышен `post_max_size`, `$_FILES` приходит пустым** — ответ будет `{"error":"file is required"}` (400), а не `file too large`. Лимит PHP выше лимита приложения, поэтому на практике это не срабатывает.
