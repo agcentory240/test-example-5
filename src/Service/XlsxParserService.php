@@ -54,7 +54,7 @@ final class XlsxParserService
 
         $products = [];
 
-        foreach ($rows as $row) {
+        foreach ($rows as $offset => $row) {
             $externalCode = $this->cellString($row, $columns['externalCode'] ?? null);
             $name = $this->cellString($row, $columns['name'] ?? null);
 
@@ -64,6 +64,8 @@ final class XlsxParserService
             }
 
             $product = new ProductDTO();
+            // Шапка — строка 1, данные начинаются со строки 2.
+            $product->sourceRow = $offset + 2;
             $product->externalCode = $externalCode;
             $product->uuid = $this->cellStringOrNull($row, $columns['uuid'] ?? null);
             $product->name = $name;

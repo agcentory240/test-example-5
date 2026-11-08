@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\DTO\ProductDTO;
 use App\Service\ImportFileStorage;
+use App\Service\ProductImportService;
 use App\Service\XlsxParserService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -32,6 +33,7 @@ final class ImportController
     public function __construct(
         private readonly ImportFileStorage $storage,
         private readonly XlsxParserService $parser,
+        private readonly ProductImportService $importer,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -58,17 +60,28 @@ final class ImportController
         $this->logger->info('Import file accepted', [
             'jobId' => $jobId,
             'path' => $path,
+            'filename' => $originalName,
             'size' => $file->getSize(),
             'mime' => $mimeType,
         ]);
 
-        // Заглушка: сообщение в очередь (Messenger) будет диспатчиться следующим шагом.
+        // Синхронный импорт: парсинг + запись в БД. Очередь (Messenger) — следующий шаг.
+        try {
+            $products = $this->parser->parse($path);
+        } catch (\Throwable $e) {
+            $this->logger->error('XLSX parse failed', ['jobId' => $jobId, 'exception' => $e]);
+
+            return $this->json($response, ['status' => 'error', 'error' => 'cannot parse file'], 422);
+        }
+
+        $report = $this->importer->import($products);
+
         return $this->json($response, [
             'status' => 'ok',
-            'jobId' => $jobId,
-            'filename' => $originalName,
-            'size' => $file->getSize(),
-        ], 202);
+            'imported' => $report['imported'],
+            'updated' => $report['updated'],
+            'errors' => $report['errors'],
+        ], 200);
     }
 
     /**

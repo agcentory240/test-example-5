@@ -10,6 +10,11 @@ namespace App\DTO;
  */
 final class ProductDTO
 {
+    /**
+     * Номер строки в исходном XLSX (шапка — строка 1). Для отчёта об ошибках.
+     */
+    public int $sourceRow = 0;
+
     public string $externalCode = '';
 
     public ?string $uuid = null;
