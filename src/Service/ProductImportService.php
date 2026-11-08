@@ -219,7 +219,8 @@ final class ProductImportService
             return;
         }
 
-        $file = str_starts_with($path, '/') ? $path : $this->projectRoot . '/' . ltrim($path, '/');
+        // path хранится относительным от public/ (uploads/products/{id}/{hash}.ext).
+        $file = $this->projectRoot . '/public/' . ltrim($path, '/');
 
         if (!is_file($file)) {
             return;

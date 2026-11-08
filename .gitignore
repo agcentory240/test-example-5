@@ -12,6 +12,7 @@ import_example.xlsx
 # backend
 vendor/
 var/
+public/uploads/
 *.log
 
 # frontend

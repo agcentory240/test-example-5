@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\DTO\ProductDTO;
+use App\Message\ImportProductsMessage;
 use App\Service\ImportFileStorage;
-use App\Service\ProductImportService;
+use App\Service\ImportJobStatusStorage;
 use App\Service\XlsxParserService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\UploadedFileInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 final class ImportController
 {
@@ -33,7 +35,8 @@ final class ImportController
     public function __construct(
         private readonly ImportFileStorage $storage,
         private readonly XlsxParserService $parser,
-        private readonly ProductImportService $importer,
+        private readonly ImportJobStatusStorage $statusStorage,
+        private readonly MessageBusInterface $bus,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -65,22 +68,46 @@ final class ImportController
             'mime' => $mimeType,
         ]);
 
-        // Синхронный импорт: парсинг + запись в БД. Очередь (Messenger) — следующий шаг.
-        try {
-            $products = $this->parser->parse($path);
-        } catch (\Throwable $e) {
-            $this->logger->error('XLSX parse failed', ['jobId' => $jobId, 'exception' => $e]);
+        $this->statusStorage->markQueued($jobId);
 
-            return $this->json($response, ['status' => 'error', 'error' => 'cannot parse file'], 422);
+        // Импорт асинхронный: парсинг, запись в БД и скачивание картинок делает воркер.
+        try {
+            $this->bus->dispatch(new ImportProductsMessage($jobId, $path));
+        } catch (\Throwable $e) {
+            $this->logger->error('Cannot dispatch import job', ['jobId' => $jobId, 'exception' => $e]);
+            $this->statusStorage->markFailed($jobId, 'cannot dispatch job');
+
+            return $this->json($response, ['error' => 'cannot dispatch job'], 500);
         }
 
-        $report = $this->importer->import($products);
+        return $this->json($response, ['status' => 'queued', 'jobId' => $jobId], 202);
+    }
+
+    /**
+     * Статус задачи импорта: читает var/imports/{jobId}.json.
+     *
+     * @param array<string, string> $args
+     */
+    public function status(Request $request, Response $response, array $args): Response
+    {
+        $jobId = (string) ($args['jobId'] ?? '');
+
+        if (!ImportJobStatusStorage::isValidJobId($jobId)) {
+            return $this->json($response, ['error' => 'invalid job id'], 400);
+        }
+
+        $state = $this->statusStorage->read($jobId);
+
+        if ($state === null) {
+            return $this->json($response, ['error' => 'job not found'], 404);
+        }
 
         return $this->json($response, [
-            'status' => 'ok',
-            'imported' => $report['imported'],
-            'updated' => $report['updated'],
-            'errors' => $report['errors'],
+            'jobId' => $jobId,
+            'status' => $state['status'] ?? 'unknown',
+            'imported' => (int) ($state['imported'] ?? 0),
+            'updated' => (int) ($state['updated'] ?? 0),
+            'errors' => $state['errors'] ?? [],
         ], 200);
     }
 

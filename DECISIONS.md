@@ -94,3 +94,12 @@
 44. **Воркер использует `Symfony\Component\Messenger\Worker`, а не ручной цикл `Connection::get()`.** Worker сам делает `get()` → `dispatch()` → `ack/reject`, добавляет `ReceivedStamp` (благодаря чему `SendMessageMiddleware` не отправляет сообщение обратно в очередь) и логирует результат. Ручной цикл пришлось бы дописывать обработкой ошибок/подтверждений — здесь это уже готово.
 45. **Retry пока не подключён.** Для повторных попыток нужен `SendFailedMessageForRetryMiddleware` + `RetryStrategy` в стеке шины; это добавится вместе с `ImportProductsMessage`.
 46. **Проверка связки:** временный `GET /api/test-dispatch` кладёт `TestMessage` в очередь, воркер пишет `Handled: Hello RabbitMQ` в stdout и `var/log/messenger.log`, сообщение подтверждается (`ack`) и исчезает из очереди.
+
+## Асинхронный импорт через очередь (блок 4.2)
+
+47. **`POST /api/import` снова асинхронный:** сохраняет файл в `var/uploads/imports/{jobId}.xlsx`, пишет статус `queued` в `var/imports/{jobId}.json`, диспатчит `ImportProductsMessage(jobId, filePath)` и отвечает `202 {status: queued, jobId}`. Синхронный парсинг/импорт из контроллера убран.
+48. **`GET /api/import/{jobId}/status`** читает `var/imports/{jobId}.json` и отдаёт `{jobId, status, imported, updated, errors}`; неизвестный jobId — 404, невалидный — 400. Статусы: `queued` → `processing` → `completed` | `failed`.
+49. **`ImportProductsHandler` собирается через PHP-DI** (`$c->get(ImportProductsHandler::class)` в `messenger.handlers_locator`): парсит XLSX, пишет товары, скачивает картинки, обновляет статус. Любая неожиданная ошибка помечает задачу `failed` и сообщение подтверждается (без poison-цикла).
+50. **Скачивание картинок — `ImageDownloaderService` (Symfony HttpClient).** Для всех `product_images` с `path IS NULL` файл кладётся в `public/uploads/products/{productId}/{sha1(url)}.{ext}`; в БД пишется относительный путь `uploads/products/{productId}/{file}`. Ошибка одной картинки идёт в `errors` (с `type: image`), импорт не прерывается.
+51. **Расширение файла определяется по `Content-Type`**, fallback — по расширению URL, финальный fallback — `jpg`. Принимаются только `image/*`.
+52. **`path` в БД — относительный от `public/`.** `ProductImportService::deleteImageFile()` резолвит его как `{projectRoot}/public/{path}`, чтобы при удалении устаревших изображений файл удалялся с диска.

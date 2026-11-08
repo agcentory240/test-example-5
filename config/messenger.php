@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Message\ImportProductsMessage;
 use App\Message\TestMessage;
+use App\MessageHandler\ImportProductsHandler;
 use App\MessageHandler\TestMessageHandler;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpReceiver;
@@ -63,15 +65,18 @@ return static function (array $settings): array {
 
             public function getSenders(Envelope $envelope): iterable
             {
-                if ($envelope->getMessage() instanceof TestMessage) {
+                $message = $envelope->getMessage();
+
+                if ($message instanceof TestMessage || $message instanceof ImportProductsMessage) {
                     yield 'async' => $this->sender;
                 }
             }
         },
 
         // Обработчики сообщений.
-        'messenger.handlers_locator' => static fn(): HandlersLocator => new HandlersLocator([
+        'messenger.handlers_locator' => static fn(ContainerInterface $c): HandlersLocator => new HandlersLocator([
             TestMessage::class => [new TestMessageHandler()],
+            ImportProductsMessage::class => [$c->get(ImportProductsHandler::class)],
         ]),
 
         // MessageBus собирается вручную: отправка в транспорт + вызов локального обработчика.

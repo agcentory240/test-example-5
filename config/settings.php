@@ -35,6 +35,10 @@ return [
         // Импорт товаров: каталог для загруженных файлов и лимит размера (10 МБ).
         'import_upload_dir' => $root . '/var/uploads/imports',
         'import_max_file_size' => 10 * 1024 * 1024,
+        // Статусы задач импорта: var/imports/{jobId}.json (пишет воркер, читает API).
+        'import_status_dir' => $root . '/var/imports',
+        // Корень public/ — сюда скачиваются изображения товаров.
+        'import_public_dir' => $root . '/public',
         // Параметры DBAL (Doctrine DBAL, без ORM).
         'db' => [
             'driver' => 'pdo_pgsql',

@@ -14,8 +14,11 @@ return static function (App $app): void {
         $group->get('/health', [HealthController::class, 'index']);
         $group->get('/health/db', [HealthController::class, 'db']);
 
-        // Загрузка XLSX-файла импорта (заглушка, без постановки в очередь).
+        // Асинхронный импорт: файл сохраняется, ImportProductsMessage уходит в очередь (202 + jobId).
         $group->post('/import', [ImportController::class, 'upload']);
+
+        // Статус задачи импорта: var/imports/{jobId}.json.
+        $group->get('/import/{jobId}/status', [ImportController::class, 'status']);
 
         // ВРЕМЕННЫЙ роут: только парсинг XLSX в DTO (без БД и очереди).
         $group->post('/import/parse-test', [ImportController::class, 'parseTest']);
