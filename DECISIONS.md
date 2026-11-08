@@ -25,7 +25,7 @@
 10. **`vendor` — анонимный volume** (`/var/www/html/vendor`). При изменении зависимостей контейнеры нужно пересоздать с `--renew-anon-volumes`:
     `docker-compose up -d --build --force-recreate --renew-anon-volumes app worker`.
 
-11. **`worker` падает до появления `bin/console`** (блок 4). Это ожидаемо: `restart: unless-stopped` перезапускает контейнер, пока консьюмер не реализован.
+11. **`worker` запускает `php bin/worker.php`** (блок 4). До реализации консьюмера контейнер перезапускался `restart: unless-stopped`; сейчас воркер работает постоянно.
 
 12. **Маппинг портов БД/брокера наружу оставлен** (для локального подключения клиентами). В проде их нужно убрать.
 
@@ -85,3 +85,12 @@
 38. **Валидация DTO перед записью:** `externalCode` и `name` обязательны, `price >= 0`. Строка с ошибкой валидации попадает в `errors`, остальные импортируются.
 39. **Номер строки для отчёта** — `ProductDTO::$sourceRow`, выставляется в парсере: шапка — строка 1, данные начинаются со строки 2.
 40. **`POST /api/import` теперь синхронный:** сохраняет файл → парсит → пишет в БД → возвращает `{status, imported, updated, errors}` (200). Ошибка парсинга файла целиком — 422. Файл остаётся в `var/uploads/imports/` для будущего асинхронного шага. Messenger — следующий блок.
+
+## Symfony Messenger + RabbitMQ (блок 4.1)
+
+41. **Версии — Symfony 7.4.** PHP в контейнере 8.3, а `symfony/messenger` и `symfony/amqp-messenger` 8.x требуют PHP ≥ 8.4.1, поэтому Composer зафиксировал `^7.4`.
+42. **MessageBus собирается вручную в [`config/messenger.php`](config/messenger.php:1)**, без FrameworkBundle. Стек: `SendMessageMiddleware` (маршрутизация в транспорт) → `HandleMessageMiddleware` (локальный обработчик). `SendersLocatorInterface` реализован анонимным классом: в `async` уходит только `TestMessage`.
+43. **API `amqp-messenger` 7.4:** `AmqpSender` и `AmqpReceiver` принимают только `Connection` (имя exchange больше не передаётся в конструктор — оно задаётся в `Connection`). Exchange — `messages` типа `fanout`, очередь — `messages`, `auto_setup` включён.
+44. **Воркер использует `Symfony\Component\Messenger\Worker`, а не ручной цикл `Connection::get()`.** Worker сам делает `get()` → `dispatch()` → `ack/reject`, добавляет `ReceivedStamp` (благодаря чему `SendMessageMiddleware` не отправляет сообщение обратно в очередь) и логирует результат. Ручной цикл пришлось бы дописывать обработкой ошибок/подтверждений — здесь это уже готово.
+45. **Retry пока не подключён.** Для повторных попыток нужен `SendFailedMessageForRetryMiddleware` + `RetryStrategy` в стеке шины; это добавится вместе с `ImportProductsMessage`.
+46. **Проверка связки:** временный `GET /api/test-dispatch` кладёт `TestMessage` в очередь, воркер пишет `Handled: Hello RabbitMQ` в stdout и `var/log/messenger.log`, сообщение подтверждается (`ack`) и исчезает из очереди.

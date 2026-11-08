@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Controller\HealthController;
 use App\Controller\ImportController;
+use App\Controller\TestMessengerController;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
@@ -18,5 +19,8 @@ return static function (App $app): void {
 
         // ВРЕМЕННЫЙ роут: только парсинг XLSX в DTO (без БД и очереди).
         $group->post('/import/parse-test', [ImportController::class, 'parseTest']);
+
+        // ВРЕМЕННЫЙ роут: проверка связки Messenger + RabbitMQ (Шаг 4.1).
+        $group->get('/test-dispatch', [TestMessengerController::class, 'dispatch']);
     });
 };

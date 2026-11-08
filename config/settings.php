@@ -45,5 +45,15 @@ return [
             'password' => $env('DB_PASSWORD', 'secret'),
             'charset' => 'utf8',
         ],
+        // RabbitMQ: standalone-транспорт Symfony Messenger.
+        'rabbitmq' => [
+            'host' => $env('RABBITMQ_HOST', 'rabbitmq'),
+            'port' => (int) $env('RABBITMQ_PORT', '5672'),
+            'vhost' => $env('RABBITMQ_VHOST', '/'),
+            'user' => $env('RABBITMQ_USER', 'guest'),
+            'password' => $env('RABBITMQ_PASSWORD', 'guest'),
+            'exchange' => $env('RABBITMQ_EXCHANGE', 'messages'),
+            'queue' => $env('RABBITMQ_QUEUE', 'messages'),
+        ],
     ],
 ];

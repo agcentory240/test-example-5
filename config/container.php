@@ -79,4 +79,8 @@ $builder->addDefinitions([
     // Все контроллеры создаются автовайрингом PHP-DI (зависимости — через конструктор).
 ]);
 
+// Symfony Messenger: ручная сборка MessageBus + AMQP-транспорт (см. config/messenger.php).
+$messengerDefinitions = require __DIR__ . '/messenger.php';
+$builder->addDefinitions($messengerDefinitions($settings));
+
 return $builder->build();

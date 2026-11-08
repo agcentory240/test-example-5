@@ -17,8 +17,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-messages}
+      RABBITMQ_QUEUE: ${RABBITMQ_QUEUE:-messages}
     volumes:
       - ./:/var/www/html
       - /var/www/html/vendor
@@ -42,7 +45,7 @@ services:
     container_name: product-import-worker
     restart: unless-stopped
     working_dir: /var/www/html
-    command: ["php", "bin/console", "messenger:consume", "async", "-vv"]
+    command: ["php", "bin/worker.php"]
     environment:
       APP_ENV: ${APP_ENV:-dev}
       DB_HOST: db
@@ -52,8 +55,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE:-messages}
+      RABBITMQ_QUEUE: ${RABBITMQ_QUEUE:-messages}
     volumes:
       - ./:/var/www/html
       - /var/www/html/vendor
