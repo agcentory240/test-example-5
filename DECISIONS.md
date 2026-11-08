@@ -44,3 +44,11 @@
 18. **Связи двусторонние с `cascade: ['persist', 'remove']` + `orphanRemoval: true`.** `Product::addAttribute()` / `addImage()` синхронизируют обратную сторону (`setProduct()`).
 
 19. **`createdAt` (`datetime_immutable`) инициализируется в конструкторе** (`new DateTimeImmutable()`). Doctrine при гидрации существующих записей перезаписывает значение из БД.
+
+## Миграции (блок 3.3)
+
+20. **Naming strategy — `UnderscoreNamingStrategy`** (`config/container.php`). В сущностях свойства `externalCode`, `purchasePrice`, `createdAt`, а в БД — `external_code`, `purchase_price`, `created_at`. Без этого Doctrine создавала camelCase-колонки, а ТЗ требует `external_code`.
+
+21. **Namespace миграций — `Migrations`**, путь — `migrations/` (`config/migrations.php`). Классы миграций грузятся самим Doctrine Migrations (`require_once`), поэтому PSR-4-автозагрузка для них в `composer.json` не нужна.
+
+22. **`orm:validate-schema` показывает `[ERROR]` из-за служебной таблицы `doctrine_migration_versions`** — она есть в БД, но не описана в маппинге, поэтому SchemaTool хочет её удалить. Это ожидаемо: `doctrine/migrations` использует `tablesExist()` на том же соединении, и глобальный `schemaAssetsFilter` сломал бы миграции. Реальная проверка синхронизации — `php bin/doctrine migrations:diff` (должен возвращать `No changes detected`).
