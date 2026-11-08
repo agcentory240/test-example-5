@@ -62,3 +62,8 @@
 25. **Валидация файла:** расширение строго `.xlsx`; MIME — по белому списку (`...spreadsheetml.sheet`, `application/vnd.ms-excel`, `application/zip`, `application/octet-stream`), т.к. curl/браузер может отдать `octet-stream`. Лимит 10 МБ (`import_max_file_size` в `config/settings.php`), `php.ini` поднимает `upload_max_filesize` до 64 МБ.
 
 26. **Если превышен `post_max_size`, `$_FILES` приходит пустым** — ответ будет `{"error":"file is required"}` (400), а не `file too large`. Лимит PHP выше лимита приложения, поэтому на практике это не срабатывает.
+
+## Docker: общий volume данных (доработка блока 1)
+
+27. **`var/` — именованный volume `var_data`, общий для `app` и `worker`.** Раньше на `/var/www/html/var` висел анонимный volume: он перекрывал `./var` с хоста (файлы загрузок не видны локально) и создавался отдельно для каждого контейнера, поэтому воркер не смог бы прочитать файл, сохранённый `app`. Теперь `app` и `worker` монтируют `var_data:/var/www/html/var`, и загрузки доступны обоим. Файлы смотреть через `docker compose exec app ls -la var/uploads/imports` или `docker run --rm -v test-example-5_var_data:/data alpine ls -la /data`.
+28. **После пересоздания `app` нужно перезапускать `nginx`** (`docker compose restart nginx`). nginx кэширует IP апстрима при старте, и после `--force-recreate` контейнер `app` получает новый адрес — запросы висят до таймаута и отдают `504 Gateway Time-out`.
