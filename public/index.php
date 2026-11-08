@@ -2,32 +2,36 @@
 
 declare(strict_types=1);
 
-use Psr\Http\Message\ResponseInterface as Response;
-use Psr\Http\Message\ServerRequestInterface as Request;
+use App\Middleware\CorsMiddleware;
+use App\Middleware\JsonBodyParsingMiddleware;
+use App\Middleware\JsonErrorHandler;
+use App\Settings\SettingsInterface;
 use Slim\Factory\AppFactory;
-
-if (!is_file(__DIR__ . '/../vendor/autoload.php')) {
-    http_response_code(503);
-    header('Content-Type: text/plain; charset=utf-8');
-    echo 'Dependencies not installed. Run: make up (composer install выполняется при сборке образа).';
-    exit;
-}
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$app = AppFactory::create();
+/** @var \Psr\Container\ContainerInterface $container */
+$container = require __DIR__ . '/../config/container.php';
+
+// AppFactory::createFromContainer — контроллеры и middleware резолвятся из PHP-DI.
+$app = AppFactory::createFromContainer($container);
 $app->addRoutingMiddleware();
-$app->addErrorMiddleware(true, true, true);
 
-$app->get('/api/health', function (Request $request, Response $response): Response {
-    $payload = [
-        'status' => 'ok',
-        'time' => (new DateTimeImmutable())->format(DATE_ATOM),
-    ];
+$settings = $container->get(SettingsInterface::class);
 
-    $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+// Ошибки — всегда JSON, не HTML.
+$errorMiddleware = $app->addErrorMiddleware(
+    $settings->isDebug(),
+    (bool) $settings->get('log_errors', true),
+    (bool) $settings->get('log_error_details', $settings->isDebug()),
+);
+$errorMiddleware->setDefaultErrorHandler($container->get(JsonErrorHandler::class));
 
-    return $response->withHeader('Content-Type', 'application/json');
-});
+// Порядок: middleware, добавленный позже, выполняется раньше.
+// CORS — снаружи (заголовки и на ошибках), затем JSON body parser.
+$app->add($container->get(JsonBodyParsingMiddleware::class));
+$app->add($container->get(CorsMiddleware::class));
+
+(require __DIR__ . '/../config/routes.php')($app);
 
 $app->run();
