@@ -9,6 +9,7 @@ use App\Message\ImportProductsMessage;
 use App\Service\ImportFileStorage;
 use App\Service\ImportJobStatusStorage;
 use App\Service\XlsxParserService;
+use OpenApi\Spec as OA;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\UploadedFileInterface;
@@ -40,6 +41,25 @@ final class ImportController
         private readonly LoggerInterface $logger,
     ) {}
 
+    #[OA\Operation\Post(
+        path: '/api/import',
+        summary: 'Загрузить XLSX с товарами (асинхронный импорт)',
+        description: 'Файл сохраняется, сообщение уходит в RabbitMQ. Лимит: 10 запросов в час с одного IP.',
+        tags: ['Import'],
+        parameters: [
+            new OA\Parameter(
+                name: 'file',
+                in: 'query',
+                description: 'XLSX-файл (multipart/form-data, поле "file", до 10 МБ)',
+                schema: new OA\Schema(type: 'string', format: 'binary'),
+            ),
+        ],
+        responses: [
+            new OA\Response(response: 202, description: 'Импорт поставлен в очередь: {status, jobId}'),
+            new OA\Response(response: 400, description: 'Файл не передан или неверный тип'),
+            new OA\Response(response: 429, description: 'Превышен лимит импортов'),
+        ],
+    )]
     public function upload(Request $request, Response $response): Response
     {
         $file = $this->extractFile($request, $response);

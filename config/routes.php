@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Controller\DocsController;
 use App\Controller\HealthController;
 use App\Controller\ImportController;
+use App\Controller\ProductController;
 use App\Controller\TestMessengerController;
+use App\Middleware\RateLimitMiddleware;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
@@ -14,8 +17,13 @@ return static function (App $app): void {
         $group->get('/health', [HealthController::class, 'index']);
         $group->get('/health/db', [HealthController::class, 'db']);
 
+        // Каталог: серверная пагинация, поиск по name (ILIKE), фильтр по цене.
+        $group->get('/products', [ProductController::class, 'list']);
+        $group->get('/products/{id}', [ProductController::class, 'show']);
+
         // Асинхронный импорт: файл сохраняется, ImportProductsMessage уходит в очередь (202 + jobId).
-        $group->post('/import', [ImportController::class, 'upload']);
+        // Rate limit: 10 запросов в час с одного IP (429 при превышении).
+        $group->post('/import', [ImportController::class, 'upload'])->add(RateLimitMiddleware::class);
 
         // Статус задачи импорта: var/imports/{jobId}.json.
         $group->get('/import/{jobId}/status', [ImportController::class, 'status']);
@@ -25,5 +33,9 @@ return static function (App $app): void {
 
         // ВРЕМЕННЫЙ роут: проверка связки Messenger + RabbitMQ (Шаг 4.1).
         $group->get('/test-dispatch', [TestMessengerController::class, 'dispatch']);
+
+        // Swagger UI + JSON-спека (генерируется из атрибутов контроллеров).
+        $group->get('/docs', [DocsController::class, 'ui']);
+        $group->get('/docs.json', [DocsController::class, 'json']);
     });
 };

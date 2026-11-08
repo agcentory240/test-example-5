@@ -37,6 +37,10 @@ return [
         'import_max_file_size' => 10 * 1024 * 1024,
         // Статусы задач импорта: var/imports/{jobId}.json (пишет воркер, читает API).
         'import_status_dir' => $root . '/var/imports',
+        // Rate limit POST /api/import: счётчики по IP в var/rate_limit.
+        'rate_limit_dir' => $root . '/var/rate_limit',
+        'rate_limit_max' => (int) $env('RATE_LIMIT_MAX', '10'),
+        'rate_limit_window' => (int) $env('RATE_LIMIT_WINDOW', '3600'),
         // Корень public/ — сюда скачиваются изображения товаров.
         'import_public_dir' => $root . '/public',
         // Параметры DBAL (Doctrine DBAL, без ORM).

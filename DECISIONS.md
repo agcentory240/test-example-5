@@ -76,6 +76,18 @@
 32. **Пропуск строк:** строка считается пустой и пропускается, если пусты и «Внешний код», и «Наименование». Если цена не парсится числом — `price = 0.0` (DTO не-nullable по контракту), `purchasePrice` остаётся `null`.
 33. **`phpoffice/phpspreadsheet` установлен в `app`-контейнере.** `vendor` — анонимный volume: после обновления зависимостей контейнеры нужно пересоздать с `--renew-anon-volumes` (см. п. 10).
 
+## API каталога (блок 6)
+
+34. **`GET /api/products` — серверная пагинация + фильтры.** Параметры: `page` (с 1), `limit` (1..100, по умолчанию 20), `name` (подстрока), `price_min`/`price_max`, `sort` (`id`|`name`, ASC). Ответ: `{data, meta: {page, limit, total, totalPages}}`. `total` считается отдельным `COUNT(p.id)` по тем же фильтрам.
+35. **Поиск по названию — регистронезависимый, через `LOWER(p.name) LIKE :name`.** DQL Doctrine не поддерживает `ILIKE` (парсер падает на нём), поэтому ILIKE эмулируется приведением обеих сторон к нижнему регистру (`mb_strtolower` в PHP + `LOWER()` в PostgreSQL). Семантика для PostgreSQL та же, что у `ILIKE '%...%'`.
+36. **Карточка `GET /api/products/{id}`** отдаёт `attributes` как key-value и `images` как `[{url, path}]`; `discount` — вычисляемое поле из `Product::getDiscount()` (в БД не хранится).
+37. **Формат списка и карточки задаёт `ProductViewDTO`.** В списке атрибуты не отдаются, изображения — отдаются (загружаются одним батч-запросом `findImagesByProductIds`, без N+1). Карточка — атрибуты + изображения одним запросом с `LEFT JOIN`.
+38. **Swagger — `zircote/swagger-php` 7.4, описание через атрибуты (`OpenApi\Spec as OA`), а не докблок-аннотации.** В 7.x докблок-аннотации помечены deprecated (удаление в 8.0), атрибуты — рекомендованный путь. Аннотации добавлены на `GET /api/products`, `GET /api/products/{id}`, `POST /api/import`; `Info`/`Server` — в `src/OpenApi/OpenApiDefinition.php`.
+39. **`GET /api/docs` — Swagger UI с CDN (unpkg, версия зафиксирована), `GET /api/docs.json` — спека, генерируется на лету.** Кэширование спеки не делается (MVP): сканируются только `src/Controller` и `src/OpenApi`.
+40. **Rate limit `POST /api/import` — файловый, `var/rate_limit/{sha1(ip)}.json`.** Скользящее окно: в файле список меток времени, старые вычищаются при каждом запросе; доступ через `flock(LOCK_EX)`. Лимит — `RATE_LIMIT_MAX` (10) за `RATE_LIMIT_WINDOW` (3600 с). При превышении — `429` + `Retry-After` и `X-RateLimit-*`. IP берётся из `REMOTE_ADDR` (nginx→php-fpm), `X-Forwarded-For` не используется — он подделывается клиентом.
+41. **`composer.json`: `config.platform.php = 8.3.36`.** Без этого composer (на образе PHP 8.4+) выбирал `symfony/type-info`/`symfony/yaml` v8.1, требующие PHP ≥ 8.4.1, и сборка `app` (PHP 8.3) падала. Фиксация платформы даёт lock-файл, совместимый с контейнером.
+42. **`vendor` в контейнере — анонимный volume (п. 10):** после `composer require` на хосте контейнер нужно пересоздать с `--force-recreate --renew-anon-volumes` (или `docker cp vendor/. <container>:/var/www/html/vendor/`), иначе PHP не видит новые пакеты.
+
 ## Запись товаров в БД (блок 5.3)
 
 34. **Upsert по `external_code`** через [`ProductRepository::findByExternalCode()`](src/Repository/ProductRepository.php:20). Уникальный индекс `UNIQ_B3BA5A5AE20A50B4` уже есть в миграции — повторный импорт обновляет, а не создаёт дубликаты.
