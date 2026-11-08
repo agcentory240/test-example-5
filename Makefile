@@ -1,6 +1,6 @@
 DC := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: up down ps logs migrate test stan cs-fix
+.PHONY: up down ps logs migrate migrate-diff migrate-status test stan cs-fix
 
 up:
 	$(DC) up -d --build
@@ -15,7 +15,13 @@ logs:
 	$(DC) logs -f --tail=100
 
 migrate:
-	$(DC) exec app php vendor/bin/doctrine-migrations migrate --no-interaction
+	$(DC) exec app php bin/doctrine migrations:migrate --no-interaction
+
+migrate-diff:
+	$(DC) exec app php bin/doctrine migrations:diff --no-interaction
+
+migrate-status:
+	$(DC) exec app php bin/doctrine migrations:status
 
 test:
 	$(DC) exec app vendor/bin/phpunit
