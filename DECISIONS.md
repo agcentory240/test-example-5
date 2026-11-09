@@ -140,3 +140,11 @@
 66. **`httpErrorInterceptor`** — функциональный (`HttpInterceptorFn`), регистрируется через `provideHttpClient(withInterceptors([...]))`. Логирует `status 0` (сеть), `401` и `500`, затем `throwError` — ошибка не глотается, компоненты могут показать сообщение.
 67. **`ImportService.upload()` отправляет `FormData` без ручного `Content-Type`** — браузер сам проставляет `multipart/form-data` с boundary.
 68. **`ImportUploadResponse` вынесен в [`import-job-status.model.ts`](client/src/app/models/import-job-status.model.ts:1)** рядом с `ImportJobResult`, чтобы сервис не описывал анонимный тип.
+
+## Фронтенд: импорт с тостами и логами поллинга (блок 8.5.3)
+
+69. **Polling живёт в [`ImportService`](client/src/app/services/import.service.ts:1)**, а не в компоненте: `interval(2000)` + `switchMap` + `takeWhile(terminal)` запускаются из сервиса, поэтому закрытие драуера не убивает опрос. История (`history$`) и логи (`logs$`) — `BehaviorSubject` в сервисе (`providedIn: 'root'`), сохраняются между открытиями драуера.
+70. **`startImport()` первым эмитит `queued`** (`concat(of(queued), polling$)`), чтобы компонент показал тост «поставлен в очередь» ровно один раз — на успешный upload. Ошибка upload приходит в `error`, ошибка поллинга дополнительно помечает запись в истории как `failed`.
+71. **Статус из API не содержит стадии «скачивание изображений».** Лог «Скачивание изображений...» добавляется эвристически — на втором ответе со статусом `processing`. Остальные логи пишутся только при смене статуса (`lastLoggedStatus`), дубли каждые 2 секунды исключены.
+72. **`MessageService` зарегистрирован глобально** в [`app.config.ts`](client/src/app/app.config.ts:1): `<p-toast>` в драуере и компонент получают один и тот же инстанс. `providePrimeNG` его не предоставляет.
+73. **PrimeFlex не установлен** (нет в `package.json`, добавлять зависимости без согласования нельзя), поэтому вместо `text-xs text-gray-500` — локальные стили `.log-line` (0.75rem, `#6b7280`). Блок логов — `div.logs-panel` c `max-height: 200px; overflow-y: auto`.
