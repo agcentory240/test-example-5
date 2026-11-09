@@ -121,6 +121,26 @@ XLSX → POST /api/import → сохранение в var/uploads/imports/{jobId
 - `/api/docs` **открыт** на тестовом стенде; в продакшене закрыть (auth или ограничение по IP).
 - Файлы `public/uploads/products/*` отдаются Nginx статикой **без авторизации**; в продакшене — подписанные URL или PHP-контроллер с проверкой доступа.
 
+## Публикация через ngrok
+
+Бесплатный ngrok показывает браузерную HTML-заглушку (`ERR_NGROK_6024`) на часть GET-запросов вместо ответа API. Чтобы запросы фронтенда всегда доходили до бэкенда:
+
+- [`ngrokInterceptor`](client/src/app/interceptors/ngrok.interceptor.ts:1) добавляет заголовок `ngrok-skip-browser-warning: true` ко всем запросам на `environment.apiUrl`;
+- [`CorsMiddleware`](src/Middleware/CorsMiddleware.php:21) разрешает этот заголовок в `Access-Control-Allow-Headers`, поэтому preflight `OPTIONS` отвечает `204` с корректными CORS-заголовками.
+
+Заголовок безвреден и для обычного домена без ngrok. При смене публичного URL достаточно обновить `apiUrl` в [`environment.ts`](client/src/environments/environment.ts:1) и добавить origin фронтенда в `CORS_ALLOWED_ORIGINS`.
+
+Проверка preflight вживую:
+
+```bash
+curl -i -X OPTIONS http://localhost:8080/api/import/<jobId>/status \
+  -H 'Origin: http://localhost:4200' \
+  -H 'Access-Control-Request-Method: GET' \
+  -H 'Access-Control-Request-Headers: authorization, ngrok-skip-browser-warning'
+```
+
+Ожидается `204` и `Access-Control-Allow-Headers`, содержащий `ngrok-skip-browser-warning`.
+
 ## Переменные окружения
 
 Все переменные с комментариями — в [`.env.example`](.env.example:1): `APP_ENV`, `APP_DEBUG`, `CORS_ALLOWED_ORIGINS`, `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW`, `JWT_SECRET`, `JWT_TTL`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_VHOST`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD`, `RABBITMQ_EXCHANGE`, `RABBITMQ_QUEUE`, `IMPORT_MAX_FILE_SIZE`, `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD`.

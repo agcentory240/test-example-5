@@ -18,7 +18,10 @@ use Psr\Http\Server\RequestHandlerInterface;
 final class CorsMiddleware implements MiddlewareInterface
 {
     private const ALLOWED_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
-    private const ALLOWED_HEADERS = 'Accept, Authorization, Content-Type, X-Requested-With';
+    // ngrok-skip-browser-warning — кастомный заголовок фронтенда, обходящий
+    // HTML-заглушку бесплатного ngrok (ERR_NGROK_6024). Его наличие вызывает
+    // preflight (OPTIONS), поэтому он обязателен здесь.
+    private const ALLOWED_HEADERS = 'Accept, Authorization, Content-Type, X-Requested-With, ngrok-skip-browser-warning';
     private const MAX_AGE = '86400';
 
     public function __construct(

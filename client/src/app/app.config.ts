@@ -9,13 +9,16 @@ import Aura from '@primeuix/themes/aura';
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { httpErrorInterceptor } from './interceptors/http-error.interceptor';
+import { ngrokInterceptor } from './interceptors/ngrok.interceptor';
 import { productsReducer } from './store/products/products.reducer';
 import { ProductsEffects } from './store/products/products.effects';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor, httpErrorInterceptor])),
+    provideHttpClient(
+      withInterceptors([ngrokInterceptor, authInterceptor, httpErrorInterceptor]),
+    ),
     provideStore({ products: productsReducer }),
     provideEffects([ProductsEffects]),
     MessageService,

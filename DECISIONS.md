@@ -32,3 +32,6 @@ HS256 (`firebase/php-jwt`), payload `sub`/`email`/`iat`/`exp`, TTL 24 часа. 
 
 ## 11. Принятые ограничения
 Нет дедупликации изображений по содержимому; статика `public/uploads/products/*` без авторизации; `/api/docs` открыт на тестовом стенде; E2E — smoke; экспорт в XLSX не реализован. Rate limit `POST /api/import` — файловый, скользящее окно (10/час с IP). Поиск по названию — `LOWER(...) LIKE`, так как DQL не поддерживает `ILIKE`.
+
+## 12. Обход HTML-заглушки ngrok: заголовок в interceptor + CORS
+Бесплатный ngrok на часть браузерных GET-запросов возвращает HTML-заглушку (`ERR_NGROK_6024`) вместо JSON — из-за этого ломался polling `GET /api/import/{jobId}/status`. Решение: [`ngrokInterceptor`](client/src/app/interceptors/ngrok.interceptor.ts:1) добавляет `ngrok-skip-browser-warning: true` ко всем запросам на `environment.apiUrl`, [`CorsMiddleware`](src/Middleware/CorsMiddleware.php:21) разрешает заголовок в `Access-Control-Allow-Headers`. Кастомный заголовок вызывает preflight `OPTIONS`; middleware обрабатывает его до роутинга и отвечает `204`. Заголовок безвреден без ngrok, поэтому применяется всегда, а не только в «публичной» сборке.
