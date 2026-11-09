@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://skittle-deem-crimp.ngrok-free.dev'
+  apiUrl: 'https://dementedly-improving-cricket.cloudpub.ru'
 };
