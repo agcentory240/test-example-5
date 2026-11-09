@@ -32,9 +32,9 @@ return [
         'log_errors' => true,
         'log_error_details' => $debug,
         'cors_allowed_origins' => $corsAllowedOrigins,
-        // Импорт товаров: каталог для загруженных файлов и лимит размера (10 МБ).
+        // Импорт товаров: каталог для загруженных файлов и лимит размера (по умолчанию 10 МБ).
         'import_upload_dir' => $root . '/var/uploads/imports',
-        'import_max_file_size' => 10 * 1024 * 1024,
+        'import_max_file_size' => (int) $env('IMPORT_MAX_FILE_SIZE', (string) (10 * 1024 * 1024)),
         // Статусы задач импорта: var/imports/{jobId}.json (пишет воркер, читает API).
         'import_status_dir' => $root . '/var/imports',
         // Rate limit POST /api/import: счётчики по IP в var/rate_limit.
