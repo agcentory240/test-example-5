@@ -7,6 +7,7 @@ namespace Tests\Support;
 use App\Entity\Product;
 use App\Entity\ProductAttribute;
 use App\Entity\ProductImage;
+use App\Entity\User;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,6 +40,7 @@ final class DoctrineTestHelper
             $em->getClassMetadata(Product::class),
             $em->getClassMetadata(ProductAttribute::class),
             $em->getClassMetadata(ProductImage::class),
+            $em->getClassMetadata(User::class),
         ]);
 
         return $em;

@@ -68,7 +68,14 @@ final class AuthService
             return null;
         }
 
-        return (array) $decoded;
+        $payload = (array) $decoded;
+
+        // Токен без идентификатора пользователя не даёт аутентифицировать субъект.
+        if (!isset($payload['sub']) || !is_string($payload['sub']) || $payload['sub'] === '') {
+            return null;
+        }
+
+        return $payload;
     }
 
     private function secret(): string
