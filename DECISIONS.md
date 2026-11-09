@@ -124,3 +124,11 @@
 56. **Воркер в тестах не ходит в сеть:** для `ImportProductsHandler` используется фикстура без URL изображений; сам `ImageDownloaderService` не подменяется (класс `final`), скачивание покрывается только через фикстуры без картинок. Ошибки картинок в тестах не воспроизводятся.
 57. **`ImportController` проверяется на Slim PSR-7 (`Slim\Psr7\UploadedFile`)**, а не через HTTP-сервер: это интеграционный тест контроллера, e2e (Playwright) — отдельный этап после фронтенда.
 58. **E2E-тесты (Playwright) не пишутся** — по указанию: после фронтенда. Пункт отмечен в `CHECKLIST.md` как невыполненный осознанно.
+
+## Фронтенд: Angular 21 + PrimeNG 21 (блок 8.1)
+
+59. **Клиент переведён с Angular 15 (NgModule) на Angular 21 (standalone).** Удалены `app.module.ts` и `app-routing.module.ts`, точка входа — `bootstrapApplication` в [`main.ts`](client/src/main.ts:1), провайдеры — [`app.config.ts`](client/src/app/app.config.ts:1), роутинг — [`app.routes.ts`](client/src/app/app.routes.ts:1).
+60. **PrimeNG 21 + `@primeuix/themes@2.0.3`.** Версия тем выбрана по зависимости `primeng@21` от `@primeuix/styles@^2.0.3`; пакет `@primeng/themes` (v18) не используется. Тема Aura подключается через `providePrimeNG({theme:{preset: Aura}})`, глобальный CSS-файл темы не импортируется.
+61. **Zoneless:** `zone.js` удалён из `package.json` и из `polyfills` в [`angular.json`](client/angular.json:1); `provideZoneChangeDetection` и `provideAnimationsAsync` не подключаются — PrimeNG 21 использует нативные CSS-анимации.
+62. **Сборщик — `@angular-devkit/build-angular:application`** (Angular 21), тесты — `:karma` без `zone.js` в `polyfills`. `strict: true` сохранён в [`tsconfig.json`](client/tsconfig.json:1).
+63. **CORS уже покрывал фронтенд:** [`CorsMiddleware`](src/Middleware/CorsMiddleware.php:18) читает `CORS_ALLOWED_ORIGINS` (по умолчанию `http://localhost:4200,http://localhost:5173`), правки не потребовались.
