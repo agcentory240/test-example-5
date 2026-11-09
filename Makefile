@@ -1,6 +1,6 @@
 DC := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: up down ps logs migrate migrate-diff migrate-status seed test stan cs-fix
+.PHONY: up down ps logs migrate migrate-diff migrate-status seed test stan cs-fix e2e
 
 up:
 	$(DC) up -d --build
@@ -34,3 +34,6 @@ stan:
 
 cs-fix:
 	$(DC) exec app vendor/bin/php-cs-fixer fix
+
+e2e:
+	cd client && npx playwright test
