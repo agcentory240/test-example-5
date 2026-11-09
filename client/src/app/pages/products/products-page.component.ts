@@ -4,10 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { Subject, debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule, TableRowSelectEvent } from 'primeng/table';
+import { environment } from '../../../environments/environment';
 import { Product } from '../../models/product.model';
 import { ProductQuery, ProductSortField, ProductSortOrder } from '../../models/product-query.model';
 import { ProductService } from '../../services/product.service';
@@ -28,6 +30,7 @@ import { ProductDetailDialogComponent } from '../../components/product-detail-di
     DatePipe,
     DecimalPipe,
     FormsModule,
+    AvatarModule,
     TableModule,
     ButtonModule,
     InputNumberModule,
@@ -99,6 +102,20 @@ export class ProductsPageComponent {
     this.filterChanges$
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((patch) => this.requestQuery({ ...patch, page: 1 }));
+  }
+
+  productImage(product: Product): string | undefined {
+    const image = product.images?.[0];
+
+    if (!image) {
+      return undefined;
+    }
+
+    return image.path ? `${environment.apiUrl}/${image.path.replace(/^\/+/, '')}` : image.url;
+  }
+
+  productInitial(product: Product): string {
+    return product.name.charAt(0).toUpperCase();
   }
 
   onNameChange(value: string): void {

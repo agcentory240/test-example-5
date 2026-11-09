@@ -6,7 +6,6 @@ import { DrawerModule } from 'primeng/drawer';
 import { FileSelectEvent, FileUploadModule } from 'primeng/fileupload';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { ToastModule } from 'primeng/toast';
 import { ImportJobResult, ImportJobStatus } from '../../models/import-job-status.model';
 import { ImportService } from '../../services/import.service';
 
@@ -26,11 +25,8 @@ const STATUS_LABEL: Record<ImportJobStatus, string> = {
     FileUploadModule,
     ButtonModule,
     ProgressBarModule,
-    ToastModule,
   ],
   template: `
-    <p-toast position="top-right" />
-
     <p-drawer
       [visible]="visible"
       (visibleChange)="visibleChange.emit($event)"

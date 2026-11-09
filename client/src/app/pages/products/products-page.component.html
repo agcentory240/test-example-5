@@ -59,6 +59,7 @@
   >
     <ng-template #header>
       <tr>
+        <th>Фото</th>
         <th pSortableColumn="id">ID <p-sortIcon field="id" /></th>
         <th>Внешний код</th>
         <th pSortableColumn="name">Наименование <p-sortIcon field="name" /></th>
@@ -70,6 +71,14 @@
 
     <ng-template #body let-product>
       <tr [pSelectableRow]="product">
+        <td>
+          <p-avatar
+            [image]="productImage(product)"
+            [label]="productImage(product) ? undefined : productInitial(product)"
+            shape="circle"
+            size="large"
+          />
+        </td>
         <td>{{ product.id }}</td>
         <td>{{ product.externalCode }}</td>
         <td>{{ product.name }}</td>
@@ -81,7 +90,7 @@
 
     <ng-template #emptymessage>
       <tr>
-        <td colspan="6">Нет товаров</td>
+        <td colspan="7">Нет товаров</td>
       </tr>
     </ng-template>
   </p-table>

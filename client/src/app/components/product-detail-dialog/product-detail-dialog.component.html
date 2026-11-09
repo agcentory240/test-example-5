@@ -51,12 +51,23 @@
 
     <section class="detail__section">
       <h4>Изображения</h4>
-      @if (product?.images?.length) {
-        <div class="detail__images">
-          @for (image of product?.images; track image.url) {
-            <img class="detail__image" [src]="imageUrl(image)" [alt]="product?.name" />
-          }
-        </div>
+      @if (galleryImages.length) {
+        <p-galleria
+          [value]="galleryImages"
+          [numVisible]="5"
+          [circular]="true"
+          [showItemNavigators]="true"
+          [showThumbnails]="galleryImages.length > 1"
+          [containerStyle]="{ 'max-width': '100%' }"
+        >
+          <ng-template #item let-image>
+            <img [src]="image.src" [alt]="image.alt" style="width: 100%; display: block;" />
+          </ng-template>
+
+          <ng-template #thumbnail let-image>
+            <img [src]="image.src" [alt]="image.alt" style="width: 100%; display: block;" />
+          </ng-template>
+        </p-galleria>
       } @else {
         <p>Нет изображений</p>
       }

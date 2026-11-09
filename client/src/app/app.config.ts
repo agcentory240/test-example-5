@@ -4,7 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { providePrimeNG } from 'primeng/config';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import Aura from '@primeuix/themes/aura';
 import { routes } from './app.routes';
 import { httpErrorInterceptor } from './interceptors/http-error.interceptor';
@@ -18,6 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideStore({ products: productsReducer }),
     provideEffects([ProductsEffects]),
     MessageService,
+    ConfirmationService,
     providePrimeNG({
       theme: {
         preset: Aura

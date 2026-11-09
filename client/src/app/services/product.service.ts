@@ -53,6 +53,13 @@ export class ProductService {
   }
 
   /**
+   * Тестовая очистка: удаляет все товары, атрибуты, изображения и файлы на бэкенде.
+   */
+  clearAll(): Observable<void> {
+    return this.http.delete<void>(this.baseUrl);
+  }
+
+  /**
    * Бэкенд отдаёт attributes в карточке как key-value-объект, а в списке не отдаёт вовсе.
    * Приводим к ProductAttribute[] и пустому массиву соответственно.
    */

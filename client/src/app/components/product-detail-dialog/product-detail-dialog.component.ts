@@ -1,13 +1,19 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { DialogModule } from 'primeng/dialog';
+import { GalleriaModule } from 'primeng/galleria';
 import { environment } from '../../../environments/environment';
-import { Product, ProductImage } from '../../models/product.model';
+import { Product } from '../../models/product.model';
+
+interface GalleryImage {
+  src: string;
+  alt: string;
+}
 
 @Component({
   selector: 'app-product-detail-dialog',
   standalone: true,
-  imports: [DialogModule, DecimalPipe],
+  imports: [DialogModule, GalleriaModule, DecimalPipe],
   templateUrl: './product-detail-dialog.component.html',
   styles: [
     `
@@ -36,20 +42,6 @@ import { Product, ProductImage } from '../../models/product.model';
         margin: 0;
         color: var(--p-text-muted-color, #6b7280);
       }
-
-      .detail__images {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 0.5rem;
-      }
-
-      .detail__image {
-        width: 100%;
-        height: 120px;
-        object-fit: cover;
-        border-radius: 0.5rem;
-        border: 1px solid var(--p-content-border-color, #e5e7eb);
-      }
     `,
   ],
 })
@@ -58,11 +50,18 @@ export class ProductDetailDialogComponent {
   @Input() product: Product | null = null;
   @Output() visibleChange = new EventEmitter<boolean>();
 
-  imageUrl(image: ProductImage): string {
-    if (image.path) {
-      return `${environment.apiUrl}/${image.path.replace(/^\/+/, '')}`;
+  get galleryImages(): GalleryImage[] {
+    const product = this.product;
+
+    if (!product) {
+      return [];
     }
 
-    return image.url;
+    return (product.images ?? []).map((image) => ({
+      src: image.path
+        ? `${environment.apiUrl}/${image.path.replace(/^\/+/, '')}`
+        : image.url,
+      alt: product.name,
+    }));
   }
 }

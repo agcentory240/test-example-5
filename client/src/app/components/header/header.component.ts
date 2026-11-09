@@ -1,7 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ImportDrawerComponent } from '../import-drawer/import-drawer.component';
+import { ProductService } from '../../services/product.service';
+import { ProductsActions } from '../../store/products/products.actions';
+import { initialProductsState } from '../../store/products/products.state';
 
 @Component({
   selector: 'app-header',
@@ -10,7 +15,19 @@ import { ImportDrawerComponent } from '../import-drawer/import-drawer.component'
   template: `
     <header class="app-header">
       <a routerLink="/products" class="app-header__link">Список товаров</a>
-      <button pButton type="button" label="Импорт" (click)="drawerVisible = true"></button>
+
+      <div class="app-header__actions">
+        <button
+          pButton
+          type="button"
+          label="Удалить все товары"
+          icon="pi pi-trash"
+          severity="danger"
+          [text]="true"
+          (click)="confirmClearAll()"
+        ></button>
+        <button pButton type="button" label="Импорт" (click)="drawerVisible = true"></button>
+      </div>
     </header>
 
     <app-import-drawer [(visible)]="drawerVisible" />
@@ -26,6 +43,12 @@ import { ImportDrawerComponent } from '../import-drawer/import-drawer.component'
         background: var(--p-content-background, #fff);
       }
 
+      .app-header__actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
       .app-header__link {
         font-weight: 600;
         text-decoration: none;
@@ -35,5 +58,41 @@ import { ImportDrawerComponent } from '../import-drawer/import-drawer.component'
   ],
 })
 export class HeaderComponent {
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly messageService = inject(MessageService);
+  private readonly productService = inject(ProductService);
+  private readonly store = inject(Store);
+
   drawerVisible = false;
+
+  confirmClearAll(): void {
+    this.confirmationService.confirm({
+      message: 'Удалить все товары и файлы?',
+      header: 'Подтверждение',
+      icon: 'pi pi-exclamation-triangle',
+      accept: () => this.clearAll(),
+    });
+  }
+
+  clearAll(): void {
+    this.productService.clearAll().subscribe({
+      next: () => {
+        this.store.dispatch(ProductsActions.loadProducts({ query: { ...initialProductsState.query } }));
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Удалено',
+          detail: 'Все товары и файлы удалены',
+          life: 3000,
+        });
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Ошибка',
+          detail: 'Не удалось удалить товары',
+          life: 3000,
+        });
+      },
+    });
+  }
 }
