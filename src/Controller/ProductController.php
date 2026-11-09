@@ -63,8 +63,14 @@ final class ProductController
             new OA\Parameter(
                 name: 'sort',
                 in: 'query',
-                description: 'Поле сортировки (ASC)',
-                schema: new OA\Schema(type: 'string', enum: ['id', 'name']),
+                description: 'Поле сортировки',
+                schema: new OA\Schema(type: 'string', enum: ['id', 'name', 'price']),
+            ),
+            new OA\Parameter(
+                name: 'order',
+                in: 'query',
+                description: 'Направление сортировки (ASC/DESC)',
+                schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'], default: 'asc'),
             ),
         ],
         responses: [
@@ -82,6 +88,7 @@ final class ProductController
 
         $name = isset($params['name']) && is_string($params['name']) ? trim($params['name']) : null;
         $sort = isset($params['sort']) && is_string($params['sort']) ? $params['sort'] : 'id';
+        $order = isset($params['order']) && strtolower((string) $params['order']) === 'desc' ? 'desc' : 'asc';
 
         try {
             $priceMin = $this->floatParam($params['price_min'] ?? null, 'price_min');
@@ -94,7 +101,7 @@ final class ProductController
             return $this->json($response, ['error' => 'price_min must be less than or equal to price_max'], 400);
         }
 
-        $result = $this->products->paginate($name, $priceMin, $priceMax, $page, $limit, $sort);
+        $result = $this->products->paginate($name, $priceMin, $priceMax, $page, $limit, $sort, $order);
 
         $productIds = array_map(
             static fn(Product $product): int => (int) $product->getId(),

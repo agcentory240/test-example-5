@@ -1,0 +1,48 @@
+<p-dialog
+  [visible]="visible"
+  (visibleChange)="visibleChange.emit($event)"
+  [header]="product?.name || 'Товар'"
+  [style]="{ width: '600px' }"
+  [modal]="true"
+>
+  <div class="detail">
+    <div class="detail__row">
+      <span class="detail__label">Внешний код</span>
+      <span>{{ product?.externalCode || '—' }}</span>
+    </div>
+    <div class="detail__row">
+      <span class="detail__label">Цена</span>
+      <span>{{ product?.price ?? '—' }}</span>
+    </div>
+    <div class="detail__row">
+      <span class="detail__label">Скидка</span>
+      <span>{{ product?.discount ?? '—' }}</span>
+    </div>
+
+    <section class="detail__section">
+      <h4>Атрибуты</h4>
+      @if (product?.attributes?.length) {
+        <ul>
+          @for (attribute of product?.attributes; track attribute.key) {
+            <li>{{ attribute.key }}: {{ attribute.value }}</li>
+          }
+        </ul>
+      } @else {
+        <p>Нет атрибутов</p>
+      }
+    </section>
+
+    <section class="detail__section">
+      <h4>Изображения</h4>
+      @if (product?.images?.length) {
+        <ul>
+          @for (image of product?.images; track image.url) {
+            <li>{{ image.url }}</li>
+          }
+        </ul>
+      } @else {
+        <p>Нет изображений</p>
+      }
+    </section>
+  </div>
+</p-dialog>

@@ -14,7 +14,7 @@ use Doctrine\ORM\QueryBuilder;
  */
 final class ProductRepository
 {
-    private const ALLOWED_SORTS = ['id', 'name'];
+    private const ALLOWED_SORTS = ['id', 'name', 'price'];
 
     public function __construct(private readonly EntityManagerInterface $em) {}
 
@@ -28,7 +28,7 @@ final class ProductRepository
 
     /**
      * Серверная пагинация с фильтрами: поиск по подстроке названия (ILIKE),
-     * диапазон цены, сортировка по id или name (ASC).
+     * диапазон цены, сортировка по id, name или price (ASC/DESC).
      *
      * @return array{items: list<Product>, total: int}
      */
@@ -39,6 +39,7 @@ final class ProductRepository
         int $page,
         int $limit,
         string $sort = 'id',
+        string $order = 'asc',
     ): array {
         $qb = $this->baseQuery();
         $this->applyFilters($qb, $name, $priceMin, $priceMax);
@@ -49,8 +50,9 @@ final class ProductRepository
             ->getSingleScalarResult();
 
         $sortField = in_array($sort, self::ALLOWED_SORTS, true) ? $sort : 'id';
+        $direction = strtolower($order) === 'desc' ? 'DESC' : 'ASC';
         $qb
-            ->orderBy('p.' . $sortField, 'ASC')
+            ->orderBy('p.' . $sortField, $direction)
             ->addOrderBy('p.id', 'ASC')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
