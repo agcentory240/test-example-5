@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -33,11 +33,11 @@ import { AuthService } from '../../services/auth.service';
           />
         </label>
 
-        @if (error) {
-          <p class="login-card__error">{{ error }}</p>
+        @if (error()) {
+          <p class="login-card__error">{{ error() }}</p>
         }
 
-        <button pButton type="submit" label="Войти" [loading]="loading" [disabled]="loading"></button>
+        <button pButton type="submit" label="Войти" [loading]="loading()" [disabled]="loading()"></button>
       </form>
     </div>
   `,
@@ -91,29 +91,30 @@ export class LoginPageComponent {
 
   email = '';
   password = '';
-  error = '';
-  loading = false;
+  readonly error = signal('');
+  readonly loading = signal(false);
 
   submit(): void {
     const email = this.email.trim();
 
     if (email === '' || this.password === '') {
-      this.error = 'Введите email и пароль';
+      this.error.set('Введите email и пароль');
       return;
     }
 
-    this.loading = true;
-    this.error = '';
+    this.loading.set(true);
+    this.error.set('');
 
     this.authService.login(email, this.password).subscribe({
       next: () => {
-        this.loading = false;
+        this.loading.set(false);
         void this.router.navigateByUrl('/products');
       },
       error: (error: { status?: number }) => {
-        this.loading = false;
-        this.error =
-          error.status === 401 ? 'Неверный email или пароль' : 'Не удалось выполнить вход';
+        this.loading.set(false);
+        this.error.set(
+          error.status === 401 ? 'Неверный email или пароль' : 'Не удалось выполнить вход',
+        );
       },
     });
   }
