@@ -4,10 +4,11 @@ import { initialProductsState } from './products.state';
 
 export const productsReducer = createReducer(
   initialProductsState,
-  on(ProductsActions.loadProducts, (state) => ({
+  on(ProductsActions.loadProducts, (state, { query }) => ({
     ...state,
     loading: true,
     error: null,
+    query: { ...state.query, ...query },
   })),
   on(ProductsActions.loadProductsSuccess, (state, { products, meta }) => ({
     ...state,

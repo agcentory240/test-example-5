@@ -32,6 +32,9 @@ export class ProductService {
     if (query.sort !== undefined && query.sort !== null) {
       params = params.set('sort', query.sort);
     }
+    if (query.order !== undefined && query.order !== null) {
+      params = params.set('order', query.order);
+    }
 
     return this.http
       .get<PaginatedResponse<Product>>(this.baseUrl, { params })

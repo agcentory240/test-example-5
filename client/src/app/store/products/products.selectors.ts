@@ -12,3 +12,5 @@ export const selectProductsError = createSelector(selectProductsState, (state) =
 export const selectProductsMeta = createSelector(selectProductsState, (state) => state.meta);
 
 export const selectTotalPages = createSelector(selectProductsMeta, (meta) => meta?.totalPages ?? 0);
+
+export const selectProductsQuery = createSelector(selectProductsState, (state) => state.query);

@@ -1,0 +1,90 @@
+<div class="products-page">
+  <div class="products-page__filters">
+    <span class="products-page__search">
+      <input
+        pInputText
+        type="text"
+        placeholder="Поиск по названию"
+        [ngModel]="filterName"
+        (ngModelChange)="onNameChange($event)"
+      />
+    </span>
+
+    <p-inputNumber
+      class="products-page__price"
+      [ngModel]="priceMin"
+      (ngModelChange)="onPriceMinChange($event)"
+      [min]="0"
+      [maxFractionDigits]="2"
+      placeholder="Цена от"
+      inputStyleClass="w-full"
+    />
+
+    <p-inputNumber
+      class="products-page__price"
+      [ngModel]="priceMax"
+      (ngModelChange)="onPriceMaxChange($event)"
+      [min]="0"
+      [maxFractionDigits]="2"
+      placeholder="Цена до"
+      inputStyleClass="w-full"
+    />
+
+    <p-button
+      label="Сбросить"
+      icon="pi pi-filter-slash"
+      severity="secondary"
+      (onClick)="resetFilters()"
+    />
+  </div>
+
+  @let meta = meta$ | async;
+  @let products = (products$ | async) ?? [];
+  @let first = ((meta?.page ?? 1) - 1) * (meta?.limit ?? 10);
+
+  <p-table
+    [value]="products"
+    [lazy]="true"
+    [totalRecords]="meta?.total ?? 0"
+    [rows]="meta?.limit ?? 10"
+    [first]="first"
+    [paginator]="true"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    [loading]="(loading$ | async) ?? false"
+    (onLazyLoad)="onLazyLoad($event)"
+    selectionMode="single"
+    (onRowSelect)="onRowSelect($event)"
+    dataKey="id"
+    [tableStyle]="{ 'min-width': '50rem' }"
+  >
+    <ng-template #header>
+      <tr>
+        <th pSortableColumn="id">ID <p-sortIcon field="id" /></th>
+        <th>Внешний код</th>
+        <th pSortableColumn="name">Наименование <p-sortIcon field="name" /></th>
+        <th pSortableColumn="price">Цена <p-sortIcon field="price" /></th>
+        <th>Скидка</th>
+        <th>Дата создания</th>
+      </tr>
+    </ng-template>
+
+    <ng-template #body let-product>
+      <tr [pSelectableRow]="product">
+        <td>{{ product.id }}</td>
+        <td>{{ product.externalCode }}</td>
+        <td>{{ product.name }}</td>
+        <td>{{ product.price | number: '1.2-2' }} ₽</td>
+        <td>{{ product.discount !== null ? product.discount + '%' : '—' }}</td>
+        <td>{{ product.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+      </tr>
+    </ng-template>
+
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="6">Нет товаров</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
+
+<app-product-detail-dialog [(visible)]="dialogVisible" [product]="dialogProduct" />

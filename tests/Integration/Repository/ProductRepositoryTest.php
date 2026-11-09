@@ -82,6 +82,26 @@ final class ProductRepositoryTest extends TestCase
         );
     }
 
+    public function testPaginateSortsByPriceAscending(): void
+    {
+        $result = $this->repository->paginate(null, null, null, 1, 5, 'price');
+
+        self::assertSame(
+            ['A-3', 'A-1', 'A-2', 'A-4', 'A-5'],
+            array_map(static fn(Product $product): string => $product->getExternalCode(), $result['items']),
+        );
+    }
+
+    public function testPaginateSortsByPriceDescending(): void
+    {
+        $result = $this->repository->paginate(null, null, null, 1, 5, 'price', 'desc');
+
+        self::assertSame(
+            ['A-5', 'A-4', 'A-2', 'A-1', 'A-3'],
+            array_map(static fn(Product $product): string => $product->getExternalCode(), $result['items']),
+        );
+    }
+
     public function testPaginateFallsBackToIdForUnknownSort(): void
     {
         $result = $this->repository->paginate(null, null, null, 1, 2, 'price; DROP TABLE products');

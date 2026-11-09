@@ -2,7 +2,7 @@
   [visible]="visible"
   (visibleChange)="visibleChange.emit($event)"
   [header]="product?.name || 'Товар'"
-  [style]="{ width: '600px' }"
+  [style]="{ width: '90vw', maxWidth: '600px' }"
   [modal]="true"
 >
   <div class="detail">
@@ -12,12 +12,29 @@
     </div>
     <div class="detail__row">
       <span class="detail__label">Цена</span>
-      <span>{{ product?.price ?? '—' }}</span>
+      <span>{{ product ? (product.price | number: '1.2-2') + ' ₽' : '—' }}</span>
+    </div>
+    <div class="detail__row">
+      <span class="detail__label">Цена закупки</span>
+      <span>{{ product?.purchasePrice !== null && product?.purchasePrice !== undefined ? (product?.purchasePrice | number: '1.2-2') + ' ₽' : '—' }}</span>
     </div>
     <div class="detail__row">
       <span class="detail__label">Скидка</span>
-      <span>{{ product?.discount ?? '—' }}</span>
+      <span>{{ product?.discount !== null && product?.discount !== undefined ? product?.discount + '%' : '—' }}</span>
     </div>
+    <div class="detail__row">
+      <span class="detail__label">Дата создания</span>
+      <span>{{ product?.createdAt || '—' }}</span>
+    </div>
+
+    <section class="detail__section">
+      <h4>Описание</h4>
+      @if (product?.description) {
+        <p>{{ product?.description }}</p>
+      } @else {
+        <p>Нет описания</p>
+      }
+    </section>
 
     <section class="detail__section">
       <h4>Атрибуты</h4>
@@ -35,11 +52,11 @@
     <section class="detail__section">
       <h4>Изображения</h4>
       @if (product?.images?.length) {
-        <ul>
+        <div class="detail__images">
           @for (image of product?.images; track image.url) {
-            <li>{{ image.url }}</li>
+            <img class="detail__image" [src]="imageUrl(image)" [alt]="product?.name" />
           }
-        </ul>
+        </div>
       } @else {
         <p>Нет изображений</p>
       }
