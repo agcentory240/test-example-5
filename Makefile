@@ -1,6 +1,6 @@
 DC := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
 
-.PHONY: up down ps logs migrate migrate-diff migrate-status test stan cs-fix
+.PHONY: up down ps logs migrate migrate-diff migrate-status seed test stan cs-fix
 
 up:
 	$(DC) up -d --build
@@ -22,6 +22,9 @@ migrate-diff:
 
 migrate-status:
 	$(DC) exec app php bin/doctrine migrations:status
+
+seed:
+	$(DC) exec app php bin/seed.php
 
 test:
 	$(DC) exec app vendor/bin/phpunit

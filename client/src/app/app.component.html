@@ -1,7 +1,9 @@
 <p-toast position="top-right" />
 <p-confirmDialog />
 
-<app-header />
+@if (!isLoginPage()) {
+  <app-header />
+}
 <main class="app-main">
   <router-outlet />
 </main>

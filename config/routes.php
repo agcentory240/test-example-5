@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Controller\AuthController;
 use App\Controller\DocsController;
 use App\Controller\HealthController;
 use App\Controller\ImportController;
 use App\Controller\ProductCleanupController;
 use App\Controller\ProductController;
 use App\Controller\TestMessengerController;
+use App\Middleware\AuthMiddleware;
 use App\Middleware\RateLimitMiddleware;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
@@ -15,6 +17,9 @@ use Slim\Routing\RouteCollectorProxy;
 return static function (App $app): void {
     // ВАЖНО: колбэк группы не static — Slim биндит его к контейнеру.
     $app->group('/api', function (RouteCollectorProxy $group): void {
+        // JWT-авторизация: public-пути (login, health, docs) пропускаются внутри AuthMiddleware.
+        $group->post('/login', [AuthController::class, 'login']);
+
         $group->get('/health', [HealthController::class, 'index']);
         $group->get('/health/db', [HealthController::class, 'db']);
 
@@ -41,5 +46,5 @@ return static function (App $app): void {
         // Swagger UI + JSON-спека (генерируется из атрибутов контроллеров).
         $group->get('/docs', [DocsController::class, 'ui']);
         $group->get('/docs.json', [DocsController::class, 'json']);
-    });
+    })->add(AuthMiddleware::class);
 };

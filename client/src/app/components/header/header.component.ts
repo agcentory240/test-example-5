@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ImportDrawerComponent } from '../import-drawer/import-drawer.component';
+import { AuthService } from '../../services/auth.service';
 import { ProductService } from '../../services/product.service';
 import { ProductsActions } from '../../store/products/products.actions';
 import { initialProductsState } from '../../store/products/products.state';
@@ -27,6 +28,15 @@ import { initialProductsState } from '../../store/products/products.state';
           (click)="confirmClearAll()"
         ></button>
         <button pButton type="button" label="Импорт" (click)="drawerVisible = true"></button>
+        <button
+          pButton
+          type="button"
+          label="Выйти"
+          icon="pi pi-sign-out"
+          severity="secondary"
+          [text]="true"
+          (click)="logout()"
+        ></button>
       </div>
     </header>
 
@@ -62,8 +72,15 @@ export class HeaderComponent {
   private readonly messageService = inject(MessageService);
   private readonly productService = inject(ProductService);
   private readonly store = inject(Store);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   drawerVisible = false;
+
+  logout(): void {
+    this.authService.logout();
+    void this.router.navigateByUrl('/login');
+  }
 
   confirmClearAll(): void {
     this.confirmationService.confirm({

@@ -41,6 +41,9 @@ return [
         'rate_limit_dir' => $root . '/var/rate_limit',
         'rate_limit_max' => (int) $env('RATE_LIMIT_MAX', '30'),
         'rate_limit_window' => (int) $env('RATE_LIMIT_WINDOW', '3600'),
+        // JWT: секрет (для HS256 не короче 32 байт) и время жизни токена в секундах (24 ч).
+        'jwt_secret' => $env('JWT_SECRET', 'change-me-dev-secret-change-me-dev-secret'),
+        'jwt_ttl' => (int) $env('JWT_TTL', '86400'),
         // Корень public/ — сюда скачиваются изображения товаров.
         'import_public_dir' => $root . '/public',
         // Параметры DBAL (Doctrine DBAL, без ORM).
