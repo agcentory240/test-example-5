@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://dementedly-improving-cricket.cloudpub.ru'
+  apiUrl: 'https://numbly-unruffled-conger.cloudpub.ru'
 };
