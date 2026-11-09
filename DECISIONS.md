@@ -132,3 +132,11 @@
 61. **Zoneless:** `zone.js` удалён из `package.json` и из `polyfills` в [`angular.json`](client/angular.json:1); `provideZoneChangeDetection` и `provideAnimationsAsync` не подключаются — PrimeNG 21 использует нативные CSS-анимации.
 62. **Сборщик — `@angular-devkit/build-angular:application`** (Angular 21), тесты — `:karma` без `zone.js` в `polyfills`. `strict: true` сохранён в [`tsconfig.json`](client/tsconfig.json:1).
 63. **CORS уже покрывал фронтенд:** [`CorsMiddleware`](src/Middleware/CorsMiddleware.php:18) читает `CORS_ALLOWED_ORIGINS` (по умолчанию `http://localhost:4200,http://localhost:5173`), правки не потребовались.
+
+## Фронтенд: модели и сервисы (блок 8.2)
+
+64. **`attributes` в API приходит в двух форматах:** в карточке товара — key-value-объект (`ProductViewDTO::detail()`), в списке поле отсутствует вовсе. Поэтому [`ProductService`](client/src/app/services/product.service.ts:1) нормализует его в `ProductAttribute[]` (`Object.entries`), а отсутствующее значение приводит к `[]`. Интерфейс `Product` всегда соответствует реальным данным.
+65. **`HttpParams` собираются только из непустых значений:** `undefined`/`null` не передаются, `name` дополнительно тримится и отбрасывается, если пустой — иначе в запрос попадала бы строка `"undefined"`.
+66. **`httpErrorInterceptor`** — функциональный (`HttpInterceptorFn`), регистрируется через `provideHttpClient(withInterceptors([...]))`. Логирует `status 0` (сеть), `401` и `500`, затем `throwError` — ошибка не глотается, компоненты могут показать сообщение.
+67. **`ImportService.upload()` отправляет `FormData` без ручного `Content-Type`** — браузер сам проставляет `multipart/form-data` с boundary.
+68. **`ImportUploadResponse` вынесен в [`import-job-status.model.ts`](client/src/app/models/import-job-status.model.ts:1)** рядом с `ImportJobResult`, чтобы сервис не описывал анонимный тип.
