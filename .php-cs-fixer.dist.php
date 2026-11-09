@@ -15,6 +15,7 @@ return (new Config())
         (new Finder())
             // 💡 root folder to check
             ->in(__DIR__)
-            
+            // var/ — сгенерированные Doctrine-прокси, их не форматируем
+            ->exclude('var')
     )
 ;

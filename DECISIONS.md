@@ -115,3 +115,12 @@
 50. **Скачивание картинок — `ImageDownloaderService` (Symfony HttpClient).** Для всех `product_images` с `path IS NULL` файл кладётся в `public/uploads/products/{productId}/{sha1(url)}.{ext}`; в БД пишется относительный путь `uploads/products/{productId}/{file}`. Ошибка одной картинки идёт в `errors` (с `type: image`), импорт не прерывается.
 51. **Расширение файла определяется по `Content-Type`**, fallback — по расширению URL, финальный fallback — `jpg`. Принимаются только `image/*`.
 52. **`path` в БД — относительный от `public/`.** `ProductImportService::deleteImageFile()` резолвит его как `{projectRoot}/public/{path}`, чтобы при удалении устаревших изображений файл удалялся с диска.
+
+## Тесты (блок 7)
+
+53. **Тестовая БД — SQLite in-memory, схема через `Doctrine\ORM\Tools\SchemaTool`** по атрибутам сущностей ([`DoctrineTestHelper`](tests/Support/DoctrineTestHelper.php:22)). PostgreSQL для тестов не требуется: контейнер не зависит от состояния `db`, схема создаётся за миллисекунды. Миграции тестами не прогоняются — они PostgreSQL-специфичны, а схема соответствует сущностям.
+54. **`phpunit.xml` — два набора:** `Unit` (`tests/Unit`, без БД) и `Integration` (`tests/Integration`, с SQLite). Запуск: `make test` → `vendor/bin/phpunit`.
+55. **XLSX-фикстуры — реальные файлы в `tests/fixtures/`** (`products.xlsx`, `products-no-images.xlsx`, `products-errors.xlsx`), сгенерированы скриптом [`generate_fixtures.php`](tests/fixtures/generate_fixtures.php:1) через PhpSpreadsheet. Перегенерировать: `docker compose exec app php tests/fixtures/generate_fixtures.php`.
+56. **Воркер в тестах не ходит в сеть:** для `ImportProductsHandler` используется фикстура без URL изображений; сам `ImageDownloaderService` не подменяется (класс `final`), скачивание покрывается только через фикстуры без картинок. Ошибки картинок в тестах не воспроизводятся.
+57. **`ImportController` проверяется на Slim PSR-7 (`Slim\Psr7\UploadedFile`)**, а не через HTTP-сервер: это интеграционный тест контроллера, e2e (Playwright) — отдельный этап после фронтенда.
+58. **E2E-тесты (Playwright) не пишутся** — по указанию: после фронтенда. Пункт отмечен в `CHECKLIST.md` как невыполненный осознанно.
