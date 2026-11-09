@@ -9,5 +9,6 @@ export const ProductsActions = createActionGroup({
     'Load Products': props<{ query: ProductQuery }>(),
     'Load Products Success': props<{ products: Product[]; meta: PaginatedMeta }>(),
     'Load Products Failure': props<{ error: string }>(),
+    'Import Completed': props<{ jobId: string; errors: number }>(),
   },
 });

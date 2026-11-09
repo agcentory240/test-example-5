@@ -128,6 +128,7 @@ final class ImportController
             'imported' => (int) ($state['imported'] ?? 0),
             'updated' => (int) ($state['updated'] ?? 0),
             'errors' => $state['errors'] ?? [],
+            'error' => $state['error'] ?? null,
         ], 200);
     }
 

@@ -221,7 +221,27 @@ final class ImportControllerTest extends TestCase
             'imported' => 1,
             'updated' => 0,
             'errors' => [],
+            'error' => null,
         ], $this->decode($response));
+    }
+
+    public function testStatusReturnsFailureReason(): void
+    {
+        $this->statusStorage->markQueued(self::JOB_ID);
+        $this->statusStorage->markFailed(self::JOB_ID, 'xlsx is broken');
+
+        $response = $this->controller()->status(
+            (new ServerRequestFactory())->createServerRequest('GET', '/api/import/status'),
+            $this->response(),
+            ['jobId' => self::JOB_ID],
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $payload = $this->decode($response);
+
+        self::assertSame(ImportJobStatusStorage::STATUS_FAILED, $payload['status']);
+        self::assertSame('xlsx is broken', $payload['error']);
     }
 
     public function testParseTestReturnsPreview(): void

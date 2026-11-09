@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { Store } from '@ngrx/store';
 import {
   BehaviorSubject,
   Observable,
@@ -18,10 +19,15 @@ import {
   ImportJobResult,
   ImportJobStatus,
   ImportUploadResponse,
+  isImageError,
+  isRowError,
 } from '../models/import-job-status.model';
+import { ProductsActions } from '../store/products/products.actions';
 
 const POLL_INTERVAL_MS = 2000;
 const MAX_LOGS = 100;
+const MAX_ERROR_LINES = 10;
+const MAX_TRACKED_JOBS = 20;
 
 const STATUS_LOG: Record<ImportJobStatus, string> = {
   queued: 'Ожидание в очереди...',
@@ -33,6 +39,7 @@ const STATUS_LOG: Record<ImportJobStatus, string> = {
 @Injectable({ providedIn: 'root' })
 export class ImportService {
   private readonly http = inject(HttpClient);
+  private readonly store = inject(Store);
   private readonly baseUrl = `${environment.apiUrl}/api/import`;
 
   private readonly historySubject = new BehaviorSubject<ImportJobResult[]>([]);
@@ -52,6 +59,12 @@ export class ImportService {
   /** Последний статус, попавший в лог, — чтобы не дублировать каждые 2 секунды. */
   private readonly lastLoggedStatus = new Map<string, ImportJobStatus>();
   private readonly processingTicks = new Map<string, number>();
+
+  /** Задачи, чьи ошибки уже выведены в лог (поллинг не должен дублировать строки). */
+  private readonly loggedErrors = new Set<string>();
+
+  /** Задачи, о завершении которых уже отправлен action (защита от дублей поллинга). */
+  private readonly finishedJobs = new Set<string>();
 
   upload(file: File): Observable<ImportUploadResponse> {
     const formData = new FormData();
@@ -79,6 +92,8 @@ export class ImportService {
             this.applyEntry(result);
             this.log(jobId, result.status);
             this.logDownloading(jobId, result.status);
+            this.logErrors(jobId, result);
+            this.notifyImportFinished(jobId, result);
           }),
           takeWhile(
             (result) => result.status !== 'completed' && result.status !== 'failed',
@@ -87,6 +102,8 @@ export class ImportService {
           catchError((error: unknown) => {
             this.applyEntry({ jobId, status: 'failed' });
             this.log(jobId, 'failed');
+            this.notifyImportFinished(jobId, { jobId, status: 'failed' });
+
             return throwError(() => error);
           }),
         );
@@ -101,13 +118,128 @@ export class ImportService {
     const index = current.findIndex((item) => item.jobId === entry.jobId);
 
     if (index === -1) {
-      this.historySubject.next([entry, ...current]);
+      const next = [entry, ...current];
+      this.historySubject.next(next);
+      this.pruneTracking(next);
       return;
     }
 
     const next = current.slice();
     next[index] = { ...current[index], ...entry };
     this.historySubject.next(next);
+  }
+
+  /**
+   * Поллинг не должен дублировать строки лога: ошибки задачи выводим один раз —
+   * при переходе в completed/failed.
+   */
+  private logErrors(jobId: string, result: ImportJobResult): void {
+    if (result.status !== 'completed' && result.status !== 'failed') {
+      return;
+    }
+
+    if (this.loggedErrors.has(jobId)) {
+      return;
+    }
+
+    this.loggedErrors.add(jobId);
+
+    if (result.status === 'failed') {
+      this.pushLog(`${this.time()} Задача упала: ${result.error ?? 'причина не указана'}`);
+    }
+
+    const errors = result.errors ?? [];
+
+    if (errors.length === 0) {
+      return;
+    }
+
+    const imageErrors = errors.filter(isImageError);
+    const rowErrors = errors.filter(isRowError);
+
+    if (imageErrors.length > 0) {
+      this.pushLog(
+        `${this.time()} Скачивание изображений: ${imageErrors.length} ${this.plural(imageErrors.length)}`,
+      );
+
+      for (const error of imageErrors.slice(0, MAX_ERROR_LINES)) {
+        this.pushLog(`${this.time()}   ${error.url} — ${error.message}`);
+      }
+
+      if (imageErrors.length > MAX_ERROR_LINES) {
+        this.pushLog(
+          `${this.time()}   ... и ещё ${imageErrors.length - MAX_ERROR_LINES} ошибок`,
+        );
+      }
+    }
+
+    if (rowErrors.length > 0) {
+      this.pushLog(`${this.time()} Ошибки строк: ${rowErrors.length}`);
+
+      for (const error of rowErrors.slice(0, MAX_ERROR_LINES)) {
+        this.pushLog(`${this.time()}   строка ${error.row} — ${error.message}`);
+      }
+
+      if (rowErrors.length > MAX_ERROR_LINES) {
+        this.pushLog(`${this.time()}   ... и ещё ${rowErrors.length - MAX_ERROR_LINES} ошибок`);
+      }
+    }
+  }
+
+  /**
+   * NgRx узнаёт о завершении импорта через action: эффект `importCompleted$`
+   * перечитывает список товаров с текущими фильтрами.
+   */
+  private notifyImportFinished(jobId: string, result: ImportJobResult): void {
+    if (result.status !== 'completed' && result.status !== 'failed') {
+      return;
+    }
+
+    if (this.finishedJobs.has(jobId)) {
+      return;
+    }
+
+    this.finishedJobs.add(jobId);
+
+    this.store.dispatch(
+      ProductsActions.importCompleted({
+        jobId,
+        errors: result.errors?.length ?? 0,
+      }),
+    );
+  }
+
+  /** Ограничивает служебные Map/Set последними задачами, чтобы не росли бесконечно. */
+  private pruneTracking(history: ImportJobResult[]): void {
+    const keep = new Set(history.slice(0, MAX_TRACKED_JOBS).map((job) => job.jobId));
+
+    for (const jobId of [...this.loggedErrors]) {
+      if (!keep.has(jobId)) {
+        this.loggedErrors.delete(jobId);
+      }
+    }
+
+    for (const jobId of [...this.finishedJobs]) {
+      if (!keep.has(jobId)) {
+        this.finishedJobs.delete(jobId);
+      }
+    }
+
+    for (const jobId of [...this.lastLoggedStatus.keys()]) {
+      if (!keep.has(jobId)) {
+        this.lastLoggedStatus.delete(jobId);
+      }
+    }
+
+    for (const jobId of [...this.processingTicks.keys()]) {
+      if (!keep.has(jobId)) {
+        this.processingTicks.delete(jobId);
+      }
+    }
+  }
+
+  private plural(count: number): string {
+    return count === 1 ? 'ошибка' : 'ошибок';
   }
 
   private log(jobId: string, status: ImportJobStatus): void {

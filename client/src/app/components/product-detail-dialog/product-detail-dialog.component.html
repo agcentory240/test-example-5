@@ -51,25 +51,38 @@
 
     <section class="detail__section">
       <h4>Изображения</h4>
-      @if (galleryImages.length) {
+      @if (galleryImages().length) {
         <p-galleria
-          [value]="galleryImages"
+          [value]="galleryImages()"
           [numVisible]="5"
           [circular]="true"
           [showItemNavigators]="true"
-          [showThumbnails]="galleryImages.length > 1"
+          [showThumbnails]="galleryImages().length > 1"
           [containerStyle]="{ 'max-width': '100%' }"
         >
           <ng-template #item let-image>
-            <img [src]="image.src" [alt]="image.alt" style="width: 100%; display: block;" />
+            <img
+              [src]="image.src"
+              [alt]="image.alt"
+              style="width: 100%; display: block;"
+              (error)="onImageError(image.src)"
+            />
           </ng-template>
 
           <ng-template #thumbnail let-image>
-            <img [src]="image.src" [alt]="image.alt" style="width: 100%; display: block;" />
+            <img
+              [src]="image.src"
+              [alt]="image.alt"
+              style="width: 100%; display: block;"
+              (error)="onImageError(image.src)"
+            />
           </ng-template>
         </p-galleria>
       } @else {
-        <p>Нет изображений</p>
+        <div class="detail__empty-image">
+          <p-avatar [label]="productInitial()" shape="circle" size="xlarge" />
+          <span>Нет изображений</span>
+        </div>
       }
     </section>
   </div>

@@ -73,8 +73,9 @@
       <tr [pSelectableRow]="product">
         <td>
           <p-avatar
-            [image]="productImage(product)"
-            [label]="productImage(product) ? undefined : productInitial(product)"
+            [image]="imageSource(product) ?? undefined"
+            [label]="imageSource(product) ? undefined : productInitial(product)"
+            (onImageError)="onImageError(product)"
             shape="circle"
             size="large"
           />

@@ -1,5 +1,5 @@
 import { AsyncPipe, DatePipe, DecimalPipe } from '@angular/common';
-import { Component, DestroyRef, inject } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { Subject, debounceTime } from 'rxjs';
@@ -9,7 +9,6 @@ import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableLazyLoadEvent, TableModule, TableRowSelectEvent } from 'primeng/table';
-import { environment } from '../../../environments/environment';
 import { Product } from '../../models/product.model';
 import { ProductQuery, ProductSortField, ProductSortOrder } from '../../models/product-query.model';
 import { ProductService } from '../../services/product.service';
@@ -18,9 +17,11 @@ import {
   selectAllProducts,
   selectProductsLoading,
   selectProductsMeta,
+  selectProductsQuery,
 } from '../../store/products/products.selectors';
 import { initialProductsState } from '../../store/products/products.state';
 import { ProductDetailDialogComponent } from '../../components/product-detail-dialog/product-detail-dialog.component';
+import { pickImageSource, productInitials } from '../../utils/product-image.util';
 
 @Component({
   selector: 'app-products-page',
@@ -95,6 +96,8 @@ export class ProductsPageComponent {
   dialogProduct: Product | null = null;
   dialogVisible = false;
 
+  private readonly failedImageSources = signal<ReadonlySet<string>>(new Set());
+
   private currentQuery: ProductQuery = { ...initialProductsState.query };
   private lastRequestedKey: string | null = null;
 
@@ -102,20 +105,48 @@ export class ProductsPageComponent {
     this.filterChanges$
       .pipe(debounceTime(300), takeUntilDestroyed())
       .subscribe((patch) => this.requestQuery({ ...patch, page: 1 }));
+
+    // Внешние изменения query (эффект после импорта, очистка из хедера)
+    // должны синхронизировать локальное состояние, иначе дедупликация
+    // lastRequestedKey заблокирует следующий нужный запрос.
+    this.store
+      .select(selectProductsQuery)
+      .pipe(takeUntilDestroyed())
+      .subscribe((query) => this.syncQuery(query));
   }
 
-  productImage(product: Product): string | undefined {
-    const image = product.images?.[0];
+  private syncQuery(query: ProductQuery): void {
+    const key = JSON.stringify(query);
 
-    if (!image) {
-      return undefined;
+    if (this.lastRequestedKey === null || key === this.lastRequestedKey) {
+      return;
     }
 
-    return image.path ? `${environment.apiUrl}/${image.path.replace(/^\/+/, '')}` : image.url;
+    this.currentQuery = { ...query };
+    this.lastRequestedKey = key;
+  }
+
+  /**
+   * Источник картинки: локальный файл → исходный URL.
+   * null — показываем инициалы.
+   */
+  imageSource(product: Product): string | null {
+    return pickImageSource(product.images?.[0], this.failedImageSources());
   }
 
   productInitial(product: Product): string {
-    return product.name.charAt(0).toUpperCase();
+    return productInitials(product.name);
+  }
+
+  /** Текущий src не загрузился: помечаем и на следующем рендере берём следующий кандидат. */
+  onImageError(product: Product): void {
+    const src = this.imageSource(product);
+
+    if (!src) {
+      return;
+    }
+
+    this.failedImageSources.update((failed) => new Set(failed).add(src));
   }
 
   onNameChange(value: string): void {

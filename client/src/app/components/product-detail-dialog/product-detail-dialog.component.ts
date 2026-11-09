@@ -1,9 +1,10 @@
 import { DecimalPipe } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
+import { AvatarModule } from 'primeng/avatar';
 import { DialogModule } from 'primeng/dialog';
 import { GalleriaModule } from 'primeng/galleria';
-import { environment } from '../../../environments/environment';
 import { Product } from '../../models/product.model';
+import { imageCandidates, productInitials } from '../../utils/product-image.util';
 
 interface GalleryImage {
   src: string;
@@ -13,7 +14,7 @@ interface GalleryImage {
 @Component({
   selector: 'app-product-detail-dialog',
   standalone: true,
-  imports: [DialogModule, GalleriaModule, DecimalPipe],
+  imports: [DialogModule, GalleriaModule, AvatarModule, DecimalPipe],
   templateUrl: './product-detail-dialog.component.html',
   styles: [
     `
@@ -42,26 +43,65 @@ interface GalleryImage {
         margin: 0;
         color: var(--p-text-muted-color, #6b7280);
       }
+
+      .detail__empty-image {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--p-text-muted-color, #6b7280);
+      }
     `,
   ],
 })
 export class ProductDetailDialogComponent {
   @Input() visible = false;
-  @Input() product: Product | null = null;
   @Output() visibleChange = new EventEmitter<boolean>();
 
-  get galleryImages(): GalleryImage[] {
-    const product = this.product;
+  @Input()
+  set product(value: Product | null) {
+    this.productSource.set(value);
+  }
+
+  get product(): Product | null {
+    return this.productSource();
+  }
+
+  private readonly productSource = signal<Product | null>(null);
+
+  /**
+   * src, которые не загрузились (битый локальный файл или мёртвый исходный URL).
+   */
+  private readonly failedImageSources = signal<ReadonlySet<string>>(new Set());
+
+  /**
+   * Только загружаемые источники: path → url.
+   * Если ни один не работает — массив пуст, показываем инициалы.
+   */
+  readonly galleryImages = computed<GalleryImage[]>(() => {
+    const product = this.productSource();
 
     if (!product) {
       return [];
     }
 
-    return (product.images ?? []).map((image) => ({
-      src: image.path
-        ? `${environment.apiUrl}/${image.path.replace(/^\/+/, '')}`
-        : image.url,
-      alt: product.name,
-    }));
+    const failed = this.failedImageSources();
+    const result: GalleryImage[] = [];
+
+    for (const image of product.images ?? []) {
+      const src = imageCandidates(image).find((candidate) => !failed.has(candidate));
+
+      if (src) {
+        result.push({ src, alt: product.name });
+      }
+    }
+
+    return result;
+  });
+
+  readonly productInitial = computed(() => productInitials(this.productSource()?.name));
+
+  onImageError(src: string): void {
+    this.failedImageSources.update((failed) => new Set(failed).add(src));
   }
 }

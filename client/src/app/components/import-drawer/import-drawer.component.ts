@@ -6,7 +6,14 @@ import { DrawerModule } from 'primeng/drawer';
 import { FileSelectEvent, FileUploadModule } from 'primeng/fileupload';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { ImportJobResult, ImportJobStatus } from '../../models/import-job-status.model';
+import { TableModule } from 'primeng/table';
+import { BehaviorSubject, combineLatest, map } from 'rxjs';
+import {
+  ImportJobResult,
+  ImportJobStatus,
+  firstErrorMessage,
+  toImportErrorRows,
+} from '../../models/import-job-status.model';
 import { ImportService } from '../../services/import.service';
 
 const STATUS_LABEL: Record<ImportJobStatus, string> = {
@@ -25,6 +32,7 @@ const STATUS_LABEL: Record<ImportJobStatus, string> = {
     FileUploadModule,
     ButtonModule,
     ProgressBarModule,
+    TableModule,
   ],
   template: `
     <p-drawer
@@ -66,7 +74,12 @@ const STATUS_LABEL: Record<ImportJobStatus, string> = {
             @if (history.length) {
               <ul class="history-list">
                 @for (job of history; track job.jobId) {
-                  <li class="history-item" [class]="'history-item--' + job.status">
+                  <li
+                    [class]="historyItemClass(job, selectedJob$ | async)"
+                    tabindex="0"
+                    (click)="selectJob(job.jobId)"
+                    (keydown.enter)="selectJob(job.jobId)"
+                  >
                     <span class="history-item__status">{{ statusLabel(job.status) }}</span>
                     <span class="history-item__meta">{{ metaLabel(job) }}</span>
                     <span class="history-item__id">{{ job.jobId }}</span>
@@ -90,6 +103,45 @@ const STATUS_LABEL: Record<ImportJobStatus, string> = {
               }
             }
           </div>
+        </section>
+
+        <section class="drawer-errors">
+          <h3>
+            Ошибки импорта
+            @if (selectedJob$ | async; as job) {
+              <span class="drawer-errors__job">{{ job.jobId }}</span>
+            }
+          </h3>
+            <div class="logs-panel">
+          @if (errors$ | async; as rows) {
+            @if (rows.length) {
+              <p-table
+                [value]="rows"
+                [paginator]="rows.length > 10"
+                [rows]="10"
+                size="small"
+                styleClass="errors-table"
+              >
+                <ng-template #header>
+                  <tr>
+                    <th class="errors-table__kind">Тип</th>
+                    <th>Строка / URL</th>
+                    <th>Ошибка</th>
+                  </tr>
+                </ng-template>
+                <ng-template #body let-row>
+                  <tr>
+                    <td>{{ row.kindLabel }}</td>
+                    <td class="errors-table__target">{{ row.target }}</td>
+                    <td>{{ row.message }}</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            } @else {
+              <p class="drawer-errors__empty">Ошибок нет</p>
+            }
+          }
+        </div>
         </section>
       </div>
     </p-drawer>
@@ -137,6 +189,12 @@ const STATUS_LABEL: Record<ImportJobStatus, string> = {
         border: 1px solid #e5e7eb;
         border-radius: 6px;
         font-size: 0.8125rem;
+        cursor: pointer;
+      }
+
+      .history-item--selected {
+        border-color: #2563eb;
+        background: #eff6ff;
       }
 
       .history-item__status {
@@ -170,6 +228,32 @@ const STATUS_LABEL: Record<ImportJobStatus, string> = {
         word-break: break-all;
       }
 
+      .drawer-errors h3 {
+        margin: 0 0 0.5rem;
+        font-size: 1rem;
+      }
+
+      .drawer-errors__job {
+        display: block;
+        font-size: 0.6875rem;
+        font-weight: 400;
+        color: #9ca3af;
+        word-break: break-all;
+      }
+
+      .drawer-errors__empty {
+        margin: 0;
+        color: var(--p-text-muted-color, #6b7280);
+      }
+
+      .errors-table__kind {
+        width: 6rem;
+      }
+
+      .errors-table__target {
+        word-break: break-all;
+      }
+
       .logs-panel {
         max-height: 200px;
         overflow-y: auto;
@@ -195,9 +279,18 @@ export class ImportDrawerComponent {
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
+  private readonly selectedJobId = new BehaviorSubject<string | null>(null);
+
   readonly history$ = this.importService.history$;
   readonly logs$ = this.importService.logs$;
   readonly active$ = this.importService.active$;
+
+  /** Выбранный из истории импорт, иначе — последний. */
+  readonly selectedJob$ = combineLatest([this.history$, this.selectedJobId]).pipe(
+    map(([history, jobId]) => history.find((job) => job.jobId === jobId) ?? history[0] ?? null),
+  );
+
+  readonly errors$ = this.selectedJob$.pipe(map((job) => toImportErrorRows(job?.errors)));
 
   selectedFile: File | null = null;
   selectedFileName = '';
@@ -206,6 +299,16 @@ export class ImportDrawerComponent {
     const file = event.files?.[0] ?? null;
     this.selectedFile = file;
     this.selectedFileName = file?.name ?? '';
+  }
+
+  selectJob(jobId: string): void {
+    this.selectedJobId.next(jobId);
+  }
+
+  historyItemClass(job: ImportJobResult, selected: ImportJobResult | null): string {
+    const base = `history-item history-item--${job.status}`;
+
+    return selected?.jobId === job.jobId ? `${base} history-item--selected` : base;
   }
 
   statusLabel(status: ImportJobStatus): string {
@@ -249,10 +352,12 @@ export class ImportDrawerComponent {
 
       case 'completed':
         if (errors > 0) {
+          const first = firstErrorMessage(result.errors);
+
           this.toast(
             'warn',
             'Импорт',
-            `Импорт завершён, но не все файлы загружены: ${errors} ошибок`,
+            `Импорт завершён, но ошибок: ${errors}. Первая: ${first ?? 'нет описания'}`,
           );
         } else {
           this.toast(
@@ -264,7 +369,11 @@ export class ImportDrawerComponent {
         break;
 
       case 'failed':
-        this.toast('error', 'Импорт', 'Импорт завершён с ошибкой');
+        this.toast(
+          'error',
+          'Импорт',
+          `Импорт завершён с ошибкой: ${result.error ?? 'причина не указана'}`,
+        );
         break;
     }
   }
