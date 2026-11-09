@@ -7,7 +7,7 @@ import { FileSelectEvent, FileUploadModule } from 'primeng/fileupload';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TableModule } from 'primeng/table';
-import { BehaviorSubject, combineLatest, map } from 'rxjs';
+import { BehaviorSubject, combineLatest, distinctUntilChanged, map } from 'rxjs';
 import {
   ImportJobResult,
   ImportJobStatus,
@@ -334,7 +334,12 @@ export class ImportDrawerComponent {
 
     this.importService
       .startImport(file)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        // Поллинг повторяет тот же статус каждые 2 секунды: без дедупликации
+        // тост «Импорт поставлен в очередь» появлялся на каждом тике.
+        distinctUntilChanged((prev, next) => prev.status === next.status),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
         next: (result) => this.notify(result),
         error: (error: unknown) =>
